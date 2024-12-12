@@ -1,0 +1,33 @@
+{
+  "reportserviceApp": {
+    "reportserviceKitchen": {
+      "home": {
+        "title": "Kitchens",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Kitchen",
+        "createOrEditLabel": "Create or edit a Kitchen",
+        "search": "Search for Kitchen",
+        "notFound": "No Kitchens found"
+      },
+      "created": "A new Kitchen is created with identifier {{ param }}",
+      "updated": "A Kitchen is updated with identifier {{ param }}",
+      "deleted": "A Kitchen is deleted with identifier {{ param }}",
+      "delete": {
+        "question": "Are you sure you want to delete Kitchen {{ id }}?"
+      },
+      "detail": {
+        "title": "Kitchen"
+      },
+      "id": "Id",
+      "reportId": "Report Id",
+      "kitchenName": "Kitchen Name",
+      "conditionLevel": "Condition Level",
+      "builtInCabinet": "Built In Cabinet",
+      "sinkCondition": "Sink Condition",
+      "ventilationSystem": "Ventilation System",
+      "applianceProvision": "Appliance Provision",
+      "remarks": "Remarks",
+      "report": "Report"
+    }
+  }
+}

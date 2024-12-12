@@ -1,0 +1,34 @@
+{
+  "reportserviceApp": {
+    "reportserviceBedroom": {
+      "home": {
+        "title": "Bedrooms",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Bedroom",
+        "createOrEditLabel": "Create or edit a Bedroom",
+        "search": "Search for Bedroom",
+        "notFound": "No Bedrooms found"
+      },
+      "created": "A new Bedroom is created with identifier {{ param }}",
+      "updated": "A Bedroom is updated with identifier {{ param }}",
+      "deleted": "A Bedroom is deleted with identifier {{ param }}",
+      "delete": {
+        "question": "Are you sure you want to delete Bedroom {{ id }}?"
+      },
+      "detail": {
+        "title": "Bedroom"
+      },
+      "id": "Id",
+      "reportId": "Report Id",
+      "bedroomName": "Bedroom Name",
+      "conditionLevel": "Condition Level",
+      "roomSize": "Room Size",
+      "closetYn": "Closet Yn",
+      "acYn": "Ac Yn",
+      "windowLocation": "Window Location",
+      "windowSize": "Window Size",
+      "remarks": "Remarks",
+      "report": "Report"
+    }
+  }
+}

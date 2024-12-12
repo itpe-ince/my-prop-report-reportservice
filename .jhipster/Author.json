@@ -1,0 +1,32 @@
+{
+  "annotations": {
+    "changelogDate": "20241212041958"
+  },
+  "applications": ["gateway", "reportservice"],
+  "clientRootFolder": "reportservice",
+  "databaseType": "sql",
+  "fields": [
+    {
+      "fieldName": "id",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "name",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "maxlength"],
+      "fieldValidateRulesMaxlength": "255"
+    },
+    {
+      "fieldName": "contactInfo",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "maxlength"],
+      "fieldValidateRulesMaxlength": "255"
+    }
+  ],
+  "microserviceName": "reportservice",
+  "name": "Author",
+  "pagination": "pagination",
+  "relationships": [],
+  "service": "serviceClass"
+}

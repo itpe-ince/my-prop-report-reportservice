@@ -1,0 +1,76 @@
+{
+  "annotations": {
+    "changelogDate": "20241212041658"
+  },
+  "applications": ["gateway", "reportservice"],
+  "clientRootFolder": "reportservice",
+  "databaseType": "sql",
+  "fields": [
+    {
+      "fieldName": "id",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "reportId",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "kitchenName",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "maxlength"],
+      "fieldValidateRulesMaxlength": "100"
+    },
+    {
+      "fieldName": "conditionLevel",
+      "fieldType": "QualityStateType",
+      "fieldTypeDocumentation": "QualityStateType",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "HIGH,MIDDLE,LOW"
+    },
+    {
+      "fieldName": "builtInCabinet",
+      "fieldType": "String",
+      "fieldValidateRules": ["minlength", "maxlength"],
+      "fieldValidateRulesMaxlength": "1",
+      "fieldValidateRulesMinlength": "1"
+    },
+    {
+      "fieldName": "sinkCondition",
+      "fieldType": "QualityStateType",
+      "fieldTypeDocumentation": "QualityStateType",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "HIGH,MIDDLE,LOW"
+    },
+    {
+      "fieldName": "ventilationSystem",
+      "fieldType": "String",
+      "fieldValidateRules": ["maxlength"],
+      "fieldValidateRulesMaxlength": "100"
+    },
+    {
+      "fieldName": "applianceProvision",
+      "fieldType": "String",
+      "fieldValidateRules": ["maxlength"],
+      "fieldValidateRulesMaxlength": "100"
+    },
+    {
+      "fieldName": "remarks",
+      "fieldType": "String"
+    }
+  ],
+  "microserviceName": "reportservice",
+  "name": "Kitchen",
+  "pagination": "pagination",
+  "relationships": [
+    {
+      "otherEntityField": "id",
+      "otherEntityName": "report",
+      "relationshipName": "report",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "service": "serviceClass"
+}

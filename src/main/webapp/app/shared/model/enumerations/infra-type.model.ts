@@ -1,0 +1,15 @@
+export enum InfraType {
+  SCHOOL = 'SCHOOL',
+
+  TRANSPRT = 'TRANSPRT',
+
+  CONVENIENCE = 'CONVENIENCE',
+
+  PARK = 'PARK',
+
+  TRAIL = 'TRAIL',
+
+  PARKING = 'PARKING',
+
+  HOSPITAL = 'HOSPITAL',
+}

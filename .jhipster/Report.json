@@ -1,0 +1,171 @@
+{
+  "annotations": {
+    "changelogDate": "20241212041158"
+  },
+  "applications": ["gateway", "reportservice"],
+  "clientRootFolder": "reportservice",
+  "databaseType": "sql",
+  "fields": [
+    {
+      "fieldName": "id",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "reportTitle",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "maxlength"],
+      "fieldValidateRulesMaxlength": "200"
+    },
+    {
+      "fieldName": "reportDate",
+      "fieldType": "Instant"
+    },
+    {
+      "fieldName": "authorId",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "summary",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "exteriorState",
+      "fieldType": "QualityStateType",
+      "fieldTypeDocumentation": "QualityStateType",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "HIGH,MIDDLE,LOW"
+    },
+    {
+      "fieldName": "constructionYear",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "maintenanceState",
+      "fieldType": "QualityStateType",
+      "fieldTypeDocumentation": "QualityStateType",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "HIGH,MIDDLE,LOW"
+    },
+    {
+      "fieldName": "parkingFacility",
+      "fieldType": "String",
+      "fieldValidateRules": ["maxlength"],
+      "fieldValidateRulesMaxlength": "500"
+    },
+    {
+      "fieldName": "parkingCount",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "elevatorState",
+      "fieldType": "QualityStateType",
+      "fieldTypeDocumentation": "QualityStateType",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "HIGH,MIDDLE,LOW"
+    },
+    {
+      "fieldName": "noiseState",
+      "fieldType": "QualityStateType",
+      "fieldTypeDocumentation": "QualityStateType",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "HIGH,MIDDLE,LOW"
+    },
+    {
+      "fieldName": "homepadState",
+      "fieldType": "QualityStateType",
+      "fieldTypeDocumentation": "QualityStateType",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "HIGH,MIDDLE,LOW"
+    },
+    {
+      "fieldName": "cctvYn",
+      "fieldType": "String",
+      "fieldValidateRules": ["minlength", "maxlength"],
+      "fieldValidateRulesMaxlength": "1",
+      "fieldValidateRulesMinlength": "1"
+    },
+    {
+      "fieldName": "fireSafetyState",
+      "fieldType": "QualityStateType",
+      "fieldTypeDocumentation": "QualityStateType",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "HIGH,MIDDLE,LOW"
+    },
+    {
+      "fieldName": "doorSecurityState",
+      "fieldType": "QualityStateType",
+      "fieldTypeDocumentation": "QualityStateType",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "HIGH,MIDDLE,LOW"
+    },
+    {
+      "fieldName": "maintenanceFee",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "redevelopmentYn",
+      "fieldType": "String",
+      "fieldValidateRules": ["minlength", "maxlength"],
+      "fieldValidateRulesMaxlength": "1",
+      "fieldValidateRulesMinlength": "1"
+    },
+    {
+      "fieldName": "rentalDemand",
+      "fieldType": "String",
+      "fieldValidateRules": ["maxlength"],
+      "fieldValidateRulesMaxlength": "200"
+    },
+    {
+      "fieldName": "communityRules",
+      "fieldType": "String",
+      "fieldValidateRules": ["maxlength"],
+      "fieldValidateRulesMaxlength": "2000"
+    },
+    {
+      "fieldName": "complexId",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "complexName",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "maxlength"],
+      "fieldValidateRulesMaxlength": "255"
+    },
+    {
+      "fieldName": "propertyId",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "propertyName",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "maxlength"],
+      "fieldValidateRulesMaxlength": "255"
+    },
+    {
+      "fieldName": "createdAt",
+      "fieldType": "Instant",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "updatedAt",
+      "fieldType": "Instant"
+    }
+  ],
+  "microserviceName": "reportservice",
+  "name": "Report",
+  "pagination": "pagination",
+  "relationships": [
+    {
+      "otherEntityField": "id",
+      "otherEntityName": "author",
+      "relationshipName": "author",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "service": "serviceClass"
+}

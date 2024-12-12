@@ -1,0 +1,32 @@
+{
+  "reportserviceApp": {
+    "reportserviceEntrance": {
+      "home": {
+        "title": "Entrances",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Entrance",
+        "createOrEditLabel": "Create or edit a Entrance",
+        "search": "Search for Entrance",
+        "notFound": "No Entrances found"
+      },
+      "created": "A new Entrance is created with identifier {{ param }}",
+      "updated": "A Entrance is updated with identifier {{ param }}",
+      "deleted": "A Entrance is deleted with identifier {{ param }}",
+      "delete": {
+        "question": "Are you sure you want to delete Entrance {{ id }}?"
+      },
+      "detail": {
+        "title": "Entrance"
+      },
+      "id": "Id",
+      "reportId": "Report Id",
+      "entranceName": "Entrance Name",
+      "condtionLevel": "Condtion Level",
+      "entranceSize": "Entrance Size",
+      "shoeRackSize": "Shoe Rack Size",
+      "pantryPresence": "Pantry Presence",
+      "remarks": "Remarks",
+      "report": "Report"
+    }
+  }
+}

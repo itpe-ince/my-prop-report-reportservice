@@ -1,0 +1,10 @@
+{
+  "reportserviceApp": {
+    "QualityStateType": {
+      "null": "",
+      "HIGH": "HIGH",
+      "MIDDLE": "MIDDLE",
+      "LOW": "LOW"
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "annotations": {
+    "changelogDate": "20241212041258"
+  },
+  "applications": ["gateway", "reportservice"],
+  "clientRootFolder": "reportservice",
+  "databaseType": "sql",
+  "fields": [
+    {
+      "fieldName": "id",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "reportId",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "infraType",
+      "fieldType": "InfraType",
+      "fieldTypeDocumentation": "InfraType",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "SCHOOL,TRANSPRT,CONVENIENCE,PARK,TRAIL,PARKING,HOSPITAL"
+    },
+    {
+      "fieldName": "infraName",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "maxlength"],
+      "fieldValidateRulesMaxlength": "200"
+    },
+    {
+      "fieldName": "conditionLevel",
+      "fieldType": "QualityStateType",
+      "fieldTypeDocumentation": "QualityStateType",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "HIGH,MIDDLE,LOW"
+    },
+    {
+      "fieldName": "infraDistance",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "infraDistanceUnit",
+      "fieldType": "QualityStateType",
+      "fieldTypeDocumentation": "QualityStateType",
+      "fieldValues": "HIGH,MIDDLE,LOW"
+    },
+    {
+      "fieldName": "remarks",
+      "fieldType": "String"
+    }
+  ],
+  "microserviceName": "reportservice",
+  "name": "Infrastructure",
+  "pagination": "pagination",
+  "relationships": [
+    {
+      "otherEntityField": "id",
+      "otherEntityName": "report",
+      "relationshipName": "report",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "service": "serviceClass"
+}

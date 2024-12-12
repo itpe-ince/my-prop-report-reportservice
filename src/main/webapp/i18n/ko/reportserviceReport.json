@@ -1,0 +1,50 @@
+{
+  "reportserviceApp": {
+    "reportserviceReport": {
+      "home": {
+        "title": "Reports",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Report",
+        "createOrEditLabel": "Create or edit a Report",
+        "search": "Search for Report",
+        "notFound": "No Reports found"
+      },
+      "created": "A new Report is created with identifier {{ param }}",
+      "updated": "A Report is updated with identifier {{ param }}",
+      "deleted": "A Report is deleted with identifier {{ param }}",
+      "delete": {
+        "question": "Are you sure you want to delete Report {{ id }}?"
+      },
+      "detail": {
+        "title": "Report"
+      },
+      "id": "Id",
+      "reportTitle": "Report Title",
+      "reportDate": "Report Date",
+      "authorId": "Author Id",
+      "summary": "Summary",
+      "exteriorState": "Exterior State",
+      "constructionYear": "Construction Year",
+      "maintenanceState": "Maintenance State",
+      "parkingFacility": "Parking Facility",
+      "parkingCount": "Parking Count",
+      "elevatorState": "Elevator State",
+      "noiseState": "Noise State",
+      "homepadState": "Homepad State",
+      "cctvYn": "Cctv Yn",
+      "fireSafetyState": "Fire Safety State",
+      "doorSecurityState": "Door Security State",
+      "maintenanceFee": "Maintenance Fee",
+      "redevelopmentYn": "Redevelopment Yn",
+      "rentalDemand": "Rental Demand",
+      "communityRules": "Community Rules",
+      "complexId": "Complex Id",
+      "complexName": "Complex Name",
+      "propertyId": "Property Id",
+      "propertyName": "Property Name",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "author": "Author"
+    }
+  }
+}

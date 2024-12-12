@@ -1,0 +1,30 @@
+{
+  "generator-jhipster": {
+    "applicationIndex": 3,
+    "applicationType": "microservice",
+    "authenticationType": "oauth2",
+    "baseName": "reportservice",
+    "buildTool": "gradle",
+    "cacheProvider": "redis",
+    "clientFramework": "react",
+    "databaseType": "sql",
+    "devDatabaseType": "mysql",
+    "devServerPort": 9063,
+    "enableHibernateCache": false,
+    "enableSwaggerCodegen": true,
+    "enableTranslation": true,
+    "entities": ["Report", "Infrastructure", "EnvFactor", "LivingRoom", "Bedroom", "Kitchen", "Bathroom", "Entrance", "Author"],
+    "jhipsterVersion": "8.7.3",
+    "jwtSecretKey": "ZDM3ZGRhNDAzZjQzZTYwZjgwN2ZhMWM4YzM0OTY1MTU5ZTY0MGE5Y2M4ODIyOThmY2I4NDFkMWIzZWYyMTYwYThhYzM2OTkyZWYwYzljNmUxY2Y0YzRmNTBlZmUyZDIxMWEzNTdlZDlhY2NmYmRmMjRlY2FhYjYyNTBjYjE1Mzg=",
+    "languages": ["ko", "en"],
+    "lastLiquibaseTimestamp": 1733977198000,
+    "messageBroker": "kafka",
+    "nativeLanguage": "ko",
+    "packageName": "com.dnc.mprs.reportservice",
+    "prodDatabaseType": "mysql",
+    "searchEngine": "elasticsearch",
+    "serverPort": 8083,
+    "serviceDiscoveryType": "consul",
+    "skipUserManagement": true
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "reportserviceApp": {
+    "reportserviceLivingRoom": {
+      "home": {
+        "title": "Living Rooms",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Living Room",
+        "createOrEditLabel": "Create or edit a Living Room",
+        "search": "Search for Living Room",
+        "notFound": "No Living Rooms found"
+      },
+      "created": "A new Living Room is created with identifier {{ param }}",
+      "updated": "A Living Room is updated with identifier {{ param }}",
+      "deleted": "A Living Room is deleted with identifier {{ param }}",
+      "delete": {
+        "question": "Are you sure you want to delete Living Room {{ id }}?"
+      },
+      "detail": {
+        "title": "Living Room"
+      },
+      "id": "Id",
+      "reportId": "Report Id",
+      "livingRoomName": "Living Room Name",
+      "conditionLevel": "Condition Level",
+      "roomSize": "Room Size",
+      "wallState": "Wall State",
+      "floorMaterial": "Floor Material",
+      "sunlight": "Sunlight",
+      "remarks": "Remarks",
+      "report": "Report"
+    }
+  }
+}
