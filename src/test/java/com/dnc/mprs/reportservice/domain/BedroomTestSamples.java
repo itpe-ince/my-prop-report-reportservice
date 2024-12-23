@@ -12,7 +12,6 @@ public class BedroomTestSamples {
     public static Bedroom getBedroomSample1() {
         return new Bedroom()
             .id(1L)
-            .reportId(1L)
             .bedroomName("bedroomName1")
             .closetYn("closetYn1")
             .acYn("acYn1")
@@ -24,7 +23,6 @@ public class BedroomTestSamples {
     public static Bedroom getBedroomSample2() {
         return new Bedroom()
             .id(2L)
-            .reportId(2L)
             .bedroomName("bedroomName2")
             .closetYn("closetYn2")
             .acYn("acYn2")
@@ -36,7 +34,6 @@ public class BedroomTestSamples {
     public static Bedroom getBedroomRandomSampleGenerator() {
         return new Bedroom()
             .id(longCount.incrementAndGet())
-            .reportId(longCount.incrementAndGet())
             .bedroomName(UUID.randomUUID().toString())
             .closetYn(UUID.randomUUID().toString())
             .acYn(UUID.randomUUID().toString())

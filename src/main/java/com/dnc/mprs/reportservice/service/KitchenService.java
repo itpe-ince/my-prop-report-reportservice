@@ -3,13 +3,13 @@ package com.dnc.mprs.reportservice.service;
 import com.dnc.mprs.reportservice.domain.Kitchen;
 import com.dnc.mprs.reportservice.repository.KitchenRepository;
 import com.dnc.mprs.reportservice.repository.search.KitchenSearchRepository;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Service Implementation for managing {@link com.dnc.mprs.reportservice.domain.Kitchen}.
@@ -35,11 +35,9 @@ public class KitchenService {
      * @param kitchen the entity to save.
      * @return the persisted entity.
      */
-    public Kitchen save(Kitchen kitchen) {
+    public Mono<Kitchen> save(Kitchen kitchen) {
         LOG.debug("Request to save Kitchen : {}", kitchen);
-        kitchen = kitchenRepository.save(kitchen);
-        kitchenSearchRepository.index(kitchen);
-        return kitchen;
+        return kitchenRepository.save(kitchen).flatMap(kitchenSearchRepository::save);
     }
 
     /**
@@ -48,11 +46,9 @@ public class KitchenService {
      * @param kitchen the entity to save.
      * @return the persisted entity.
      */
-    public Kitchen update(Kitchen kitchen) {
+    public Mono<Kitchen> update(Kitchen kitchen) {
         LOG.debug("Request to update Kitchen : {}", kitchen);
-        kitchen = kitchenRepository.save(kitchen);
-        kitchenSearchRepository.index(kitchen);
-        return kitchen;
+        return kitchenRepository.save(kitchen).flatMap(kitchenSearchRepository::save);
     }
 
     /**
@@ -61,15 +57,12 @@ public class KitchenService {
      * @param kitchen the entity to update partially.
      * @return the persisted entity.
      */
-    public Optional<Kitchen> partialUpdate(Kitchen kitchen) {
+    public Mono<Kitchen> partialUpdate(Kitchen kitchen) {
         LOG.debug("Request to partially update Kitchen : {}", kitchen);
 
         return kitchenRepository
             .findById(kitchen.getId())
             .map(existingKitchen -> {
-                if (kitchen.getReportId() != null) {
-                    existingKitchen.setReportId(kitchen.getReportId());
-                }
                 if (kitchen.getKitchenName() != null) {
                     existingKitchen.setKitchenName(kitchen.getKitchenName());
                 }
@@ -94,10 +87,10 @@ public class KitchenService {
 
                 return existingKitchen;
             })
-            .map(kitchenRepository::save)
-            .map(savedKitchen -> {
-                kitchenSearchRepository.index(savedKitchen);
-                return savedKitchen;
+            .flatMap(kitchenRepository::save)
+            .flatMap(savedKitchen -> {
+                kitchenSearchRepository.save(savedKitchen);
+                return Mono.just(savedKitchen);
             });
     }
 
@@ -108,9 +101,26 @@ public class KitchenService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Kitchen> findAll(Pageable pageable) {
+    public Flux<Kitchen> findAll(Pageable pageable) {
         LOG.debug("Request to get all Kitchens");
-        return kitchenRepository.findAll(pageable);
+        return kitchenRepository.findAllBy(pageable);
+    }
+
+    /**
+     * Returns the number of kitchens available.
+     * @return the number of entities in the database.
+     *
+     */
+    public Mono<Long> countAll() {
+        return kitchenRepository.count();
+    }
+
+    /**
+     * Returns the number of kitchens available in search repository.
+     *
+     */
+    public Mono<Long> searchCount() {
+        return kitchenSearchRepository.count();
     }
 
     /**
@@ -120,7 +130,7 @@ public class KitchenService {
      * @return the entity.
      */
     @Transactional(readOnly = true)
-    public Optional<Kitchen> findOne(Long id) {
+    public Mono<Kitchen> findOne(Long id) {
         LOG.debug("Request to get Kitchen : {}", id);
         return kitchenRepository.findById(id);
     }
@@ -129,11 +139,11 @@ public class KitchenService {
      * Delete the kitchen by id.
      *
      * @param id the id of the entity.
+     * @return a Mono to signal the deletion
      */
-    public void delete(Long id) {
+    public Mono<Void> delete(Long id) {
         LOG.debug("Request to delete Kitchen : {}", id);
-        kitchenRepository.deleteById(id);
-        kitchenSearchRepository.deleteFromIndexById(id);
+        return kitchenRepository.deleteById(id).then(kitchenSearchRepository.deleteById(id));
     }
 
     /**
@@ -144,7 +154,7 @@ public class KitchenService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Kitchen> search(String query, Pageable pageable) {
+    public Flux<Kitchen> search(String query, Pageable pageable) {
         LOG.debug("Request to search for a page of Kitchens for query {}", query);
         return kitchenSearchRepository.search(query, pageable);
     }

@@ -3,13 +3,13 @@ package com.dnc.mprs.reportservice.service;
 import com.dnc.mprs.reportservice.domain.Report;
 import com.dnc.mprs.reportservice.repository.ReportRepository;
 import com.dnc.mprs.reportservice.repository.search.ReportSearchRepository;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Service Implementation for managing {@link com.dnc.mprs.reportservice.domain.Report}.
@@ -35,11 +35,9 @@ public class ReportService {
      * @param report the entity to save.
      * @return the persisted entity.
      */
-    public Report save(Report report) {
+    public Mono<Report> save(Report report) {
         LOG.debug("Request to save Report : {}", report);
-        report = reportRepository.save(report);
-        reportSearchRepository.index(report);
-        return report;
+        return reportRepository.save(report).flatMap(reportSearchRepository::save);
     }
 
     /**
@@ -48,11 +46,9 @@ public class ReportService {
      * @param report the entity to save.
      * @return the persisted entity.
      */
-    public Report update(Report report) {
+    public Mono<Report> update(Report report) {
         LOG.debug("Request to update Report : {}", report);
-        report = reportRepository.save(report);
-        reportSearchRepository.index(report);
-        return report;
+        return reportRepository.save(report).flatMap(reportSearchRepository::save);
     }
 
     /**
@@ -61,7 +57,7 @@ public class ReportService {
      * @param report the entity to update partially.
      * @return the persisted entity.
      */
-    public Optional<Report> partialUpdate(Report report) {
+    public Mono<Report> partialUpdate(Report report) {
         LOG.debug("Request to partially update Report : {}", report);
 
         return reportRepository
@@ -72,9 +68,6 @@ public class ReportService {
                 }
                 if (report.getReportDate() != null) {
                     existingReport.setReportDate(report.getReportDate());
-                }
-                if (report.getAuthorId() != null) {
-                    existingReport.setAuthorId(report.getAuthorId());
                 }
                 if (report.getSummary() != null) {
                     existingReport.setSummary(report.getSummary());
@@ -145,10 +138,10 @@ public class ReportService {
 
                 return existingReport;
             })
-            .map(reportRepository::save)
-            .map(savedReport -> {
-                reportSearchRepository.index(savedReport);
-                return savedReport;
+            .flatMap(reportRepository::save)
+            .flatMap(savedReport -> {
+                reportSearchRepository.save(savedReport);
+                return Mono.just(savedReport);
             });
     }
 
@@ -159,9 +152,26 @@ public class ReportService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Report> findAll(Pageable pageable) {
+    public Flux<Report> findAll(Pageable pageable) {
         LOG.debug("Request to get all Reports");
-        return reportRepository.findAll(pageable);
+        return reportRepository.findAllBy(pageable);
+    }
+
+    /**
+     * Returns the number of reports available.
+     * @return the number of entities in the database.
+     *
+     */
+    public Mono<Long> countAll() {
+        return reportRepository.count();
+    }
+
+    /**
+     * Returns the number of reports available in search repository.
+     *
+     */
+    public Mono<Long> searchCount() {
+        return reportSearchRepository.count();
     }
 
     /**
@@ -171,7 +181,7 @@ public class ReportService {
      * @return the entity.
      */
     @Transactional(readOnly = true)
-    public Optional<Report> findOne(Long id) {
+    public Mono<Report> findOne(Long id) {
         LOG.debug("Request to get Report : {}", id);
         return reportRepository.findById(id);
     }
@@ -180,11 +190,11 @@ public class ReportService {
      * Delete the report by id.
      *
      * @param id the id of the entity.
+     * @return a Mono to signal the deletion
      */
-    public void delete(Long id) {
+    public Mono<Void> delete(Long id) {
         LOG.debug("Request to delete Report : {}", id);
-        reportRepository.deleteById(id);
-        reportSearchRepository.deleteFromIndexById(id);
+        return reportRepository.deleteById(id).then(reportSearchRepository.deleteById(id));
     }
 
     /**
@@ -195,7 +205,7 @@ public class ReportService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Report> search(String query, Pageable pageable) {
+    public Flux<Report> search(String query, Pageable pageable) {
         LOG.debug("Request to search for a page of Reports for query {}", query);
         return reportSearchRepository.search(query, pageable);
     }

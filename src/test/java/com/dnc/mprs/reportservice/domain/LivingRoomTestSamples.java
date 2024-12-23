@@ -12,7 +12,6 @@ public class LivingRoomTestSamples {
     public static LivingRoom getLivingRoomSample1() {
         return new LivingRoom()
             .id(1L)
-            .reportId(1L)
             .livingRoomName("livingRoomName1")
             .floorMaterial("floorMaterial1")
             .sunlight("sunlight1")
@@ -22,7 +21,6 @@ public class LivingRoomTestSamples {
     public static LivingRoom getLivingRoomSample2() {
         return new LivingRoom()
             .id(2L)
-            .reportId(2L)
             .livingRoomName("livingRoomName2")
             .floorMaterial("floorMaterial2")
             .sunlight("sunlight2")
@@ -32,7 +30,6 @@ public class LivingRoomTestSamples {
     public static LivingRoom getLivingRoomRandomSampleGenerator() {
         return new LivingRoom()
             .id(longCount.incrementAndGet())
-            .reportId(longCount.incrementAndGet())
             .livingRoomName(UUID.randomUUID().toString())
             .floorMaterial(UUID.randomUUID().toString())
             .sunlight(UUID.randomUUID().toString())

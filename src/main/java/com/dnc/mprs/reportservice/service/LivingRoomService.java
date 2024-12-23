@@ -3,13 +3,13 @@ package com.dnc.mprs.reportservice.service;
 import com.dnc.mprs.reportservice.domain.LivingRoom;
 import com.dnc.mprs.reportservice.repository.LivingRoomRepository;
 import com.dnc.mprs.reportservice.repository.search.LivingRoomSearchRepository;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Service Implementation for managing {@link com.dnc.mprs.reportservice.domain.LivingRoom}.
@@ -35,11 +35,9 @@ public class LivingRoomService {
      * @param livingRoom the entity to save.
      * @return the persisted entity.
      */
-    public LivingRoom save(LivingRoom livingRoom) {
+    public Mono<LivingRoom> save(LivingRoom livingRoom) {
         LOG.debug("Request to save LivingRoom : {}", livingRoom);
-        livingRoom = livingRoomRepository.save(livingRoom);
-        livingRoomSearchRepository.index(livingRoom);
-        return livingRoom;
+        return livingRoomRepository.save(livingRoom).flatMap(livingRoomSearchRepository::save);
     }
 
     /**
@@ -48,11 +46,9 @@ public class LivingRoomService {
      * @param livingRoom the entity to save.
      * @return the persisted entity.
      */
-    public LivingRoom update(LivingRoom livingRoom) {
+    public Mono<LivingRoom> update(LivingRoom livingRoom) {
         LOG.debug("Request to update LivingRoom : {}", livingRoom);
-        livingRoom = livingRoomRepository.save(livingRoom);
-        livingRoomSearchRepository.index(livingRoom);
-        return livingRoom;
+        return livingRoomRepository.save(livingRoom).flatMap(livingRoomSearchRepository::save);
     }
 
     /**
@@ -61,15 +57,12 @@ public class LivingRoomService {
      * @param livingRoom the entity to update partially.
      * @return the persisted entity.
      */
-    public Optional<LivingRoom> partialUpdate(LivingRoom livingRoom) {
+    public Mono<LivingRoom> partialUpdate(LivingRoom livingRoom) {
         LOG.debug("Request to partially update LivingRoom : {}", livingRoom);
 
         return livingRoomRepository
             .findById(livingRoom.getId())
             .map(existingLivingRoom -> {
-                if (livingRoom.getReportId() != null) {
-                    existingLivingRoom.setReportId(livingRoom.getReportId());
-                }
                 if (livingRoom.getLivingRoomName() != null) {
                     existingLivingRoom.setLivingRoomName(livingRoom.getLivingRoomName());
                 }
@@ -94,10 +87,10 @@ public class LivingRoomService {
 
                 return existingLivingRoom;
             })
-            .map(livingRoomRepository::save)
-            .map(savedLivingRoom -> {
-                livingRoomSearchRepository.index(savedLivingRoom);
-                return savedLivingRoom;
+            .flatMap(livingRoomRepository::save)
+            .flatMap(savedLivingRoom -> {
+                livingRoomSearchRepository.save(savedLivingRoom);
+                return Mono.just(savedLivingRoom);
             });
     }
 
@@ -108,9 +101,26 @@ public class LivingRoomService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<LivingRoom> findAll(Pageable pageable) {
+    public Flux<LivingRoom> findAll(Pageable pageable) {
         LOG.debug("Request to get all LivingRooms");
-        return livingRoomRepository.findAll(pageable);
+        return livingRoomRepository.findAllBy(pageable);
+    }
+
+    /**
+     * Returns the number of livingRooms available.
+     * @return the number of entities in the database.
+     *
+     */
+    public Mono<Long> countAll() {
+        return livingRoomRepository.count();
+    }
+
+    /**
+     * Returns the number of livingRooms available in search repository.
+     *
+     */
+    public Mono<Long> searchCount() {
+        return livingRoomSearchRepository.count();
     }
 
     /**
@@ -120,7 +130,7 @@ public class LivingRoomService {
      * @return the entity.
      */
     @Transactional(readOnly = true)
-    public Optional<LivingRoom> findOne(Long id) {
+    public Mono<LivingRoom> findOne(Long id) {
         LOG.debug("Request to get LivingRoom : {}", id);
         return livingRoomRepository.findById(id);
     }
@@ -129,11 +139,11 @@ public class LivingRoomService {
      * Delete the livingRoom by id.
      *
      * @param id the id of the entity.
+     * @return a Mono to signal the deletion
      */
-    public void delete(Long id) {
+    public Mono<Void> delete(Long id) {
         LOG.debug("Request to delete LivingRoom : {}", id);
-        livingRoomRepository.deleteById(id);
-        livingRoomSearchRepository.deleteFromIndexById(id);
+        return livingRoomRepository.deleteById(id).then(livingRoomSearchRepository.deleteById(id));
     }
 
     /**
@@ -144,7 +154,7 @@ public class LivingRoomService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<LivingRoom> search(String query, Pageable pageable) {
+    public Flux<LivingRoom> search(String query, Pageable pageable) {
         LOG.debug("Request to search for a page of LivingRooms for query {}", query);
         return livingRoomSearchRepository.search(query, pageable);
     }

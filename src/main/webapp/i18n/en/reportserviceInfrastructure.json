@@ -19,7 +19,6 @@
         "title": "Infrastructure"
       },
       "id": "Id",
-      "reportId": "Report Id",
       "infraType": "Infra Type",
       "infraName": "Infra Name",
       "conditionLevel": "Condition Level",

@@ -3,7 +3,6 @@ import { QualityStateType } from 'app/shared/model/enumerations/quality-state-ty
 
 export interface IKitchen {
   id?: number;
-  reportId?: number;
   kitchenName?: string;
   conditionLevel?: keyof typeof QualityStateType;
   builtInCabinet?: string | null;

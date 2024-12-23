@@ -47,7 +47,6 @@ public class InfrastructureAsserts {
     public static void assertInfrastructureUpdatableFieldsEquals(Infrastructure expected, Infrastructure actual) {
         assertThat(expected)
             .as("Verify Infrastructure relevant properties")
-            .satisfies(e -> assertThat(e.getReportId()).as("check reportId").isEqualTo(actual.getReportId()))
             .satisfies(e -> assertThat(e.getInfraType()).as("check infraType").isEqualTo(actual.getInfraType()))
             .satisfies(e -> assertThat(e.getInfraName()).as("check infraName").isEqualTo(actual.getInfraName()))
             .satisfies(e -> assertThat(e.getConditionLevel()).as("check conditionLevel").isEqualTo(actual.getConditionLevel()))

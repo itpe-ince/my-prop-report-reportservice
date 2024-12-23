@@ -32,12 +32,6 @@ export const EntranceDetail = () => {
           </dt>
           <dd>{entranceEntity.id}</dd>
           <dt>
-            <span id="reportId">
-              <Translate contentKey="reportserviceApp.reportserviceEntrance.reportId">Report Id</Translate>
-            </span>
-          </dt>
-          <dd>{entranceEntity.reportId}</dd>
-          <dt>
             <span id="entranceName">
               <Translate contentKey="reportserviceApp.reportserviceEntrance.entranceName">Entrance Name</Translate>
             </span>

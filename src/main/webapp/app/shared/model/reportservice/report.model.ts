@@ -6,7 +6,6 @@ export interface IReport {
   id?: number;
   reportTitle?: string;
   reportDate?: dayjs.Dayjs | null;
-  authorId?: number;
   summary?: string | null;
   exteriorState?: keyof typeof QualityStateType;
   constructionYear?: number | null;

@@ -51,9 +51,6 @@ export const ReportUpdate = () => {
       values.id = Number(values.id);
     }
     values.reportDate = convertDateTimeToServer(values.reportDate);
-    if (values.authorId !== undefined && typeof values.authorId !== 'number') {
-      values.authorId = Number(values.authorId);
-    }
     if (values.constructionYear !== undefined && typeof values.constructionYear !== 'number') {
       values.constructionYear = Number(values.constructionYear);
     }
@@ -150,17 +147,6 @@ export const ReportUpdate = () => {
                 data-cy="reportDate"
                 type="datetime-local"
                 placeholder="YYYY-MM-DD HH:mm"
-              />
-              <ValidatedField
-                label={translate('reportserviceApp.reportserviceReport.authorId')}
-                id="report-authorId"
-                name="authorId"
-                data-cy="authorId"
-                type="text"
-                validate={{
-                  required: { value: true, message: translate('entity.validation.required') },
-                  validate: v => isNumber(v) || translate('entity.validation.number'),
-                }}
               />
               <ValidatedField
                 label={translate('reportserviceApp.reportserviceReport.summary')}

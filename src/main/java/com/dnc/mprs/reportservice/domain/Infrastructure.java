@@ -3,65 +3,61 @@ package com.dnc.mprs.reportservice.domain;
 import com.dnc.mprs.reportservice.domain.enumeration.InfraType;
 import com.dnc.mprs.reportservice.domain.enumeration.QualityStateType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 /**
  * A Infrastructure.
  */
-@Entity
-@Table(name = "infrastructure")
+@Table("infrastructure")
 @org.springframework.data.elasticsearch.annotations.Document(indexName = "infrastructure")
 @SuppressWarnings("common-java:DuplicatedBlocks")
 public class Infrastructure implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @NotNull
+    @NotNull(message = "must not be null")
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
+    @Column("id")
     private Long id;
 
-    @NotNull
-    @Column(name = "report_id", nullable = false)
-    private Long reportId;
-
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "infra_type", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("infra_type")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private InfraType infraType;
 
-    @NotNull
+    @NotNull(message = "must not be null")
     @Size(max = 200)
-    @Column(name = "infra_name", length = 200, nullable = false)
+    @Column("infra_name")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String infraName;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "condition_level", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("condition_level")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType conditionLevel;
 
-    @Column(name = "infra_distance")
+    @Column("infra_distance")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Integer)
     private Integer infraDistance;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "infra_distance_unit")
+    @Column("infra_distance_unit")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType infraDistanceUnit;
 
-    @Column(name = "remarks")
+    @Column("remarks")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String remarks;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @org.springframework.data.annotation.Transient
     @JsonIgnoreProperties(value = { "author" }, allowSetters = true)
     private Report report;
+
+    @Column("report_id")
+    private Long reportId;
 
     // jhipster-needle-entity-add-field - JHipster will add fields here
 
@@ -76,19 +72,6 @@ public class Infrastructure implements Serializable {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Long getReportId() {
-        return this.reportId;
-    }
-
-    public Infrastructure reportId(Long reportId) {
-        this.setReportId(reportId);
-        return this;
-    }
-
-    public void setReportId(Long reportId) {
-        this.reportId = reportId;
     }
 
     public InfraType getInfraType() {
@@ -175,11 +158,20 @@ public class Infrastructure implements Serializable {
 
     public void setReport(Report report) {
         this.report = report;
+        this.reportId = report != null ? report.getId() : null;
     }
 
     public Infrastructure report(Report report) {
         this.setReport(report);
         return this;
+    }
+
+    public Long getReportId() {
+        return this.reportId;
+    }
+
+    public void setReportId(Long report) {
+        this.reportId = report;
     }
 
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here
@@ -206,7 +198,6 @@ public class Infrastructure implements Serializable {
     public String toString() {
         return "Infrastructure{" +
             "id=" + getId() +
-            ", reportId=" + getReportId() +
             ", infraType='" + getInfraType() + "'" +
             ", infraName='" + getInfraName() + "'" +
             ", conditionLevel='" + getConditionLevel() + "'" +

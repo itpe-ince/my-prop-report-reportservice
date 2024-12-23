@@ -182,10 +182,6 @@ export const Infrastructure = () => {
                   <Translate contentKey="reportserviceApp.reportserviceInfrastructure.id">Id</Translate>{' '}
                   <FontAwesomeIcon icon={getSortIconByFieldName('id')} />
                 </th>
-                <th className="hand" onClick={sort('reportId')}>
-                  <Translate contentKey="reportserviceApp.reportserviceInfrastructure.reportId">Report Id</Translate>{' '}
-                  <FontAwesomeIcon icon={getSortIconByFieldName('reportId')} />
-                </th>
                 <th className="hand" onClick={sort('infraType')}>
                   <Translate contentKey="reportserviceApp.reportserviceInfrastructure.infraType">Infra Type</Translate>{' '}
                   <FontAwesomeIcon icon={getSortIconByFieldName('infraType')} />
@@ -225,7 +221,6 @@ export const Infrastructure = () => {
                       {infrastructure.id}
                     </Button>
                   </td>
-                  <td>{infrastructure.reportId}</td>
                   <td>
                     <Translate contentKey={`reportserviceApp.InfraType.${infrastructure.infraType}`} />
                   </td>

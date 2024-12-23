@@ -3,13 +3,13 @@ package com.dnc.mprs.reportservice.service;
 import com.dnc.mprs.reportservice.domain.Bathroom;
 import com.dnc.mprs.reportservice.repository.BathroomRepository;
 import com.dnc.mprs.reportservice.repository.search.BathroomSearchRepository;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Service Implementation for managing {@link com.dnc.mprs.reportservice.domain.Bathroom}.
@@ -35,11 +35,9 @@ public class BathroomService {
      * @param bathroom the entity to save.
      * @return the persisted entity.
      */
-    public Bathroom save(Bathroom bathroom) {
+    public Mono<Bathroom> save(Bathroom bathroom) {
         LOG.debug("Request to save Bathroom : {}", bathroom);
-        bathroom = bathroomRepository.save(bathroom);
-        bathroomSearchRepository.index(bathroom);
-        return bathroom;
+        return bathroomRepository.save(bathroom).flatMap(bathroomSearchRepository::save);
     }
 
     /**
@@ -48,11 +46,9 @@ public class BathroomService {
      * @param bathroom the entity to save.
      * @return the persisted entity.
      */
-    public Bathroom update(Bathroom bathroom) {
+    public Mono<Bathroom> update(Bathroom bathroom) {
         LOG.debug("Request to update Bathroom : {}", bathroom);
-        bathroom = bathroomRepository.save(bathroom);
-        bathroomSearchRepository.index(bathroom);
-        return bathroom;
+        return bathroomRepository.save(bathroom).flatMap(bathroomSearchRepository::save);
     }
 
     /**
@@ -61,15 +57,12 @@ public class BathroomService {
      * @param bathroom the entity to update partially.
      * @return the persisted entity.
      */
-    public Optional<Bathroom> partialUpdate(Bathroom bathroom) {
+    public Mono<Bathroom> partialUpdate(Bathroom bathroom) {
         LOG.debug("Request to partially update Bathroom : {}", bathroom);
 
         return bathroomRepository
             .findById(bathroom.getId())
             .map(existingBathroom -> {
-                if (bathroom.getReportId() != null) {
-                    existingBathroom.setReportId(bathroom.getReportId());
-                }
                 if (bathroom.getBathroomName() != null) {
                     existingBathroom.setBathroomName(bathroom.getBathroomName());
                 }
@@ -97,10 +90,10 @@ public class BathroomService {
 
                 return existingBathroom;
             })
-            .map(bathroomRepository::save)
-            .map(savedBathroom -> {
-                bathroomSearchRepository.index(savedBathroom);
-                return savedBathroom;
+            .flatMap(bathroomRepository::save)
+            .flatMap(savedBathroom -> {
+                bathroomSearchRepository.save(savedBathroom);
+                return Mono.just(savedBathroom);
             });
     }
 
@@ -111,9 +104,26 @@ public class BathroomService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Bathroom> findAll(Pageable pageable) {
+    public Flux<Bathroom> findAll(Pageable pageable) {
         LOG.debug("Request to get all Bathrooms");
-        return bathroomRepository.findAll(pageable);
+        return bathroomRepository.findAllBy(pageable);
+    }
+
+    /**
+     * Returns the number of bathrooms available.
+     * @return the number of entities in the database.
+     *
+     */
+    public Mono<Long> countAll() {
+        return bathroomRepository.count();
+    }
+
+    /**
+     * Returns the number of bathrooms available in search repository.
+     *
+     */
+    public Mono<Long> searchCount() {
+        return bathroomSearchRepository.count();
     }
 
     /**
@@ -123,7 +133,7 @@ public class BathroomService {
      * @return the entity.
      */
     @Transactional(readOnly = true)
-    public Optional<Bathroom> findOne(Long id) {
+    public Mono<Bathroom> findOne(Long id) {
         LOG.debug("Request to get Bathroom : {}", id);
         return bathroomRepository.findById(id);
     }
@@ -132,11 +142,11 @@ public class BathroomService {
      * Delete the bathroom by id.
      *
      * @param id the id of the entity.
+     * @return a Mono to signal the deletion
      */
-    public void delete(Long id) {
+    public Mono<Void> delete(Long id) {
         LOG.debug("Request to delete Bathroom : {}", id);
-        bathroomRepository.deleteById(id);
-        bathroomSearchRepository.deleteFromIndexById(id);
+        return bathroomRepository.deleteById(id).then(bathroomSearchRepository.deleteById(id));
     }
 
     /**
@@ -147,7 +157,7 @@ public class BathroomService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Bathroom> search(String query, Pageable pageable) {
+    public Flux<Bathroom> search(String query, Pageable pageable) {
         LOG.debug("Request to search for a page of Bathrooms for query {}", query);
         return bathroomSearchRepository.search(query, pageable);
     }

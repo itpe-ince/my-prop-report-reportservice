@@ -3,7 +3,6 @@ import { QualityStateType } from 'app/shared/model/enumerations/quality-state-ty
 
 export interface IBedroom {
   id?: number;
-  reportId?: number;
   bedroomName?: string;
   conditionLevel?: keyof typeof QualityStateType;
   roomSize?: number | null;

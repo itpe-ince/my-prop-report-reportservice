@@ -19,7 +19,6 @@
         "title": "Entrance"
       },
       "id": "Id",
-      "reportId": "Report Id",
       "entranceName": "Entrance Name",
       "condtionLevel": "Condtion Level",
       "entranceSize": "Entrance Size",

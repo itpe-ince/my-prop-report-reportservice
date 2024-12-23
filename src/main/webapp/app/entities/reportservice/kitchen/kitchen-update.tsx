@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button, Col, Row } from 'reactstrap';
-import { Translate, ValidatedField, ValidatedForm, isNumber, translate } from 'react-jhipster';
+import { Translate, ValidatedField, ValidatedForm, translate } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import { useAppDispatch, useAppSelector } from 'app/config/store';
@@ -48,9 +48,6 @@ export const KitchenUpdate = () => {
   const saveEntity = values => {
     if (values.id !== undefined && typeof values.id !== 'number') {
       values.id = Number(values.id);
-    }
-    if (values.reportId !== undefined && typeof values.reportId !== 'number') {
-      values.reportId = Number(values.reportId);
     }
 
     const entity = {
@@ -101,17 +98,6 @@ export const KitchenUpdate = () => {
                   validate={{ required: true }}
                 />
               ) : null}
-              <ValidatedField
-                label={translate('reportserviceApp.reportserviceKitchen.reportId')}
-                id="kitchen-reportId"
-                name="reportId"
-                data-cy="reportId"
-                type="text"
-                validate={{
-                  required: { value: true, message: translate('entity.validation.required') },
-                  validate: v => isNumber(v) || translate('entity.validation.number'),
-                }}
-              />
               <ValidatedField
                 label={translate('reportserviceApp.reportserviceKitchen.kitchenName')}
                 id="kitchen-kitchenName"

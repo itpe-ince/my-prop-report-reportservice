@@ -47,7 +47,6 @@ public class KitchenAsserts {
     public static void assertKitchenUpdatableFieldsEquals(Kitchen expected, Kitchen actual) {
         assertThat(expected)
             .as("Verify Kitchen relevant properties")
-            .satisfies(e -> assertThat(e.getReportId()).as("check reportId").isEqualTo(actual.getReportId()))
             .satisfies(e -> assertThat(e.getKitchenName()).as("check kitchenName").isEqualTo(actual.getKitchenName()))
             .satisfies(e -> assertThat(e.getConditionLevel()).as("check conditionLevel").isEqualTo(actual.getConditionLevel()))
             .satisfies(e -> assertThat(e.getBuiltInCabinet()).as("check builtInCabinet").isEqualTo(actual.getBuiltInCabinet()))

@@ -191,10 +191,6 @@ export const Report = () => {
                   <Translate contentKey="reportserviceApp.reportserviceReport.reportDate">Report Date</Translate>{' '}
                   <FontAwesomeIcon icon={getSortIconByFieldName('reportDate')} />
                 </th>
-                <th className="hand" onClick={sort('authorId')}>
-                  <Translate contentKey="reportserviceApp.reportserviceReport.authorId">Author Id</Translate>{' '}
-                  <FontAwesomeIcon icon={getSortIconByFieldName('authorId')} />
-                </th>
                 <th className="hand" onClick={sort('summary')}>
                   <Translate contentKey="reportserviceApp.reportserviceReport.summary">Summary</Translate>{' '}
                   <FontAwesomeIcon icon={getSortIconByFieldName('summary')} />
@@ -299,7 +295,6 @@ export const Report = () => {
                   </td>
                   <td>{report.reportTitle}</td>
                   <td>{report.reportDate ? <TextFormat type="date" value={report.reportDate} format={APP_DATE_FORMAT} /> : null}</td>
-                  <td>{report.authorId}</td>
                   <td>{report.summary}</td>
                   <td>
                     <Translate contentKey={`reportserviceApp.QualityStateType.${report.exteriorState}`} />

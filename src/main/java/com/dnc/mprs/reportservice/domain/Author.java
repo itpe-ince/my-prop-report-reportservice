@@ -1,35 +1,35 @@
 package com.dnc.mprs.reportservice.domain;
 
-import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 /**
  * A Author.
  */
-@Entity
-@Table(name = "author")
+@Table("author")
 @org.springframework.data.elasticsearch.annotations.Document(indexName = "author")
 @SuppressWarnings("common-java:DuplicatedBlocks")
 public class Author implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @NotNull
+    @NotNull(message = "must not be null")
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
+    @Column("id")
     private Long id;
 
-    @NotNull
+    @NotNull(message = "must not be null")
     @Size(max = 255)
-    @Column(name = "name", length = 255, nullable = false)
+    @Column("name")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String name;
 
-    @NotNull
+    @NotNull(message = "must not be null")
     @Size(max = 255)
-    @Column(name = "contact_info", length = 255, nullable = false)
+    @Column("contact_info")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String contactInfo;
 

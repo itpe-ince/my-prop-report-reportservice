@@ -12,7 +12,6 @@ public class KitchenTestSamples {
     public static Kitchen getKitchenSample1() {
         return new Kitchen()
             .id(1L)
-            .reportId(1L)
             .kitchenName("kitchenName1")
             .builtInCabinet("builtInCabinet1")
             .ventilationSystem("ventilationSystem1")
@@ -23,7 +22,6 @@ public class KitchenTestSamples {
     public static Kitchen getKitchenSample2() {
         return new Kitchen()
             .id(2L)
-            .reportId(2L)
             .kitchenName("kitchenName2")
             .builtInCabinet("builtInCabinet2")
             .ventilationSystem("ventilationSystem2")
@@ -34,7 +32,6 @@ public class KitchenTestSamples {
     public static Kitchen getKitchenRandomSampleGenerator() {
         return new Kitchen()
             .id(longCount.incrementAndGet())
-            .reportId(longCount.incrementAndGet())
             .kitchenName(UUID.randomUUID().toString())
             .builtInCabinet(UUID.randomUUID().toString())
             .ventilationSystem(UUID.randomUUID().toString())

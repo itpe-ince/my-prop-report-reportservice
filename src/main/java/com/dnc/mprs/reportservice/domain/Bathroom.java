@@ -2,76 +2,72 @@ package com.dnc.mprs.reportservice.domain;
 
 import com.dnc.mprs.reportservice.domain.enumeration.QualityStateType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 /**
  * A Bathroom.
  */
-@Entity
-@Table(name = "bathroom")
+@Table("bathroom")
 @org.springframework.data.elasticsearch.annotations.Document(indexName = "bathroom")
 @SuppressWarnings("common-java:DuplicatedBlocks")
 public class Bathroom implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @NotNull
+    @NotNull(message = "must not be null")
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
+    @Column("id")
     private Long id;
 
-    @NotNull
-    @Column(name = "report_id", nullable = false)
-    private Long reportId;
-
-    @NotNull
+    @NotNull(message = "must not be null")
     @Size(max = 100)
-    @Column(name = "bathroom_name", length = 100, nullable = false)
+    @Column("bathroom_name")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String bathroomName;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "condtion_level", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("condtion_level")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType condtionLevel;
 
-    @Column(name = "bathroom_size", precision = 21, scale = 2)
+    @Column("bathroom_size")
     private BigDecimal bathroomSize;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "water_pressure", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("water_pressure")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType waterPressure;
 
     @Size(min = 1, max = 1)
-    @Column(name = "shower_booth_presence", length = 1)
+    @Column("shower_booth_presence")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String showerBoothPresence;
 
     @Size(min = 1, max = 1)
-    @Column(name = "bathtub_presence", length = 1)
+    @Column("bathtub_presence")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String bathtubPresence;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "floor_and_ceiling", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("floor_and_ceiling")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType floorAndCeiling;
 
-    @Column(name = "remarks")
+    @Column("remarks")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String remarks;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @org.springframework.data.annotation.Transient
     @JsonIgnoreProperties(value = { "author" }, allowSetters = true)
     private Report report;
+
+    @Column("report_id")
+    private Long reportId;
 
     // jhipster-needle-entity-add-field - JHipster will add fields here
 
@@ -86,19 +82,6 @@ public class Bathroom implements Serializable {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Long getReportId() {
-        return this.reportId;
-    }
-
-    public Bathroom reportId(Long reportId) {
-        this.setReportId(reportId);
-        return this;
-    }
-
-    public void setReportId(Long reportId) {
-        this.reportId = reportId;
     }
 
     public String getBathroomName() {
@@ -137,7 +120,7 @@ public class Bathroom implements Serializable {
     }
 
     public void setBathroomSize(BigDecimal bathroomSize) {
-        this.bathroomSize = bathroomSize;
+        this.bathroomSize = bathroomSize != null ? bathroomSize.stripTrailingZeros() : null;
     }
 
     public QualityStateType getWaterPressure() {
@@ -211,11 +194,20 @@ public class Bathroom implements Serializable {
 
     public void setReport(Report report) {
         this.report = report;
+        this.reportId = report != null ? report.getId() : null;
     }
 
     public Bathroom report(Report report) {
         this.setReport(report);
         return this;
+    }
+
+    public Long getReportId() {
+        return this.reportId;
+    }
+
+    public void setReportId(Long report) {
+        this.reportId = report;
     }
 
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here
@@ -242,7 +234,6 @@ public class Bathroom implements Serializable {
     public String toString() {
         return "Bathroom{" +
             "id=" + getId() +
-            ", reportId=" + getReportId() +
             ", bathroomName='" + getBathroomName() + "'" +
             ", condtionLevel='" + getCondtionLevel() + "'" +
             ", bathroomSize=" + getBathroomSize() +

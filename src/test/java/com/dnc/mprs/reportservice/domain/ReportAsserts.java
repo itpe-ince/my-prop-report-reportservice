@@ -49,7 +49,6 @@ public class ReportAsserts {
             .as("Verify Report relevant properties")
             .satisfies(e -> assertThat(e.getReportTitle()).as("check reportTitle").isEqualTo(actual.getReportTitle()))
             .satisfies(e -> assertThat(e.getReportDate()).as("check reportDate").isEqualTo(actual.getReportDate()))
-            .satisfies(e -> assertThat(e.getAuthorId()).as("check authorId").isEqualTo(actual.getAuthorId()))
             .satisfies(e -> assertThat(e.getSummary()).as("check summary").isEqualTo(actual.getSummary()))
             .satisfies(e -> assertThat(e.getExteriorState()).as("check exteriorState").isEqualTo(actual.getExteriorState()))
             .satisfies(e -> assertThat(e.getConstructionYear()).as("check constructionYear").isEqualTo(actual.getConstructionYear()))

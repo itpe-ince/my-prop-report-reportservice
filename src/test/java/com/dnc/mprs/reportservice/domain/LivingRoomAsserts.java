@@ -48,7 +48,6 @@ public class LivingRoomAsserts {
     public static void assertLivingRoomUpdatableFieldsEquals(LivingRoom expected, LivingRoom actual) {
         assertThat(expected)
             .as("Verify LivingRoom relevant properties")
-            .satisfies(e -> assertThat(e.getReportId()).as("check reportId").isEqualTo(actual.getReportId()))
             .satisfies(e -> assertThat(e.getLivingRoomName()).as("check livingRoomName").isEqualTo(actual.getLivingRoomName()))
             .satisfies(e -> assertThat(e.getConditionLevel()).as("check conditionLevel").isEqualTo(actual.getConditionLevel()))
             .satisfies(e ->

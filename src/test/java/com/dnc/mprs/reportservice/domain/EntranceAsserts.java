@@ -48,7 +48,6 @@ public class EntranceAsserts {
     public static void assertEntranceUpdatableFieldsEquals(Entrance expected, Entrance actual) {
         assertThat(expected)
             .as("Verify Entrance relevant properties")
-            .satisfies(e -> assertThat(e.getReportId()).as("check reportId").isEqualTo(actual.getReportId()))
             .satisfies(e -> assertThat(e.getEntranceName()).as("check entranceName").isEqualTo(actual.getEntranceName()))
             .satisfies(e -> assertThat(e.getCondtionLevel()).as("check condtionLevel").isEqualTo(actual.getCondtionLevel()))
             .satisfies(e ->

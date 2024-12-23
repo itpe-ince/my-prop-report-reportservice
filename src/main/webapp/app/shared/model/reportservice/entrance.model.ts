@@ -3,7 +3,6 @@ import { QualityStateType } from 'app/shared/model/enumerations/quality-state-ty
 
 export interface IEntrance {
   id?: number;
-  reportId?: number;
   entranceName?: string;
   condtionLevel?: keyof typeof QualityStateType;
   entranceSize?: number | null;

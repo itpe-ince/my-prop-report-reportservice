@@ -32,12 +32,6 @@ export const EnvFactorDetail = () => {
           </dt>
           <dd>{envFactorEntity.id}</dd>
           <dt>
-            <span id="reportId">
-              <Translate contentKey="reportserviceApp.reportserviceEnvFactor.reportId">Report Id</Translate>
-            </span>
-          </dt>
-          <dd>{envFactorEntity.reportId}</dd>
-          <dt>
             <span id="envFactorName">
               <Translate contentKey="reportserviceApp.reportserviceEnvFactor.envFactorName">Env Factor Name</Translate>
             </span>

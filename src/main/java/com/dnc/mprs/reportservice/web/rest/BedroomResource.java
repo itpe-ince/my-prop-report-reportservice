@@ -4,26 +4,30 @@ import com.dnc.mprs.reportservice.domain.Bedroom;
 import com.dnc.mprs.reportservice.repository.BedroomRepository;
 import com.dnc.mprs.reportservice.service.BedroomService;
 import com.dnc.mprs.reportservice.web.rest.errors.BadRequestAlertException;
-import com.dnc.mprs.reportservice.web.rest.errors.ElasticsearchExceptionMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.ForwardedHeaderUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.PaginationUtil;
-import tech.jhipster.web.util.ResponseUtil;
+import tech.jhipster.web.util.reactive.ResponseUtil;
 
 /**
  * REST controller for managing {@link com.dnc.mprs.reportservice.domain.Bedroom}.
@@ -56,15 +60,22 @@ public class BedroomResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PostMapping("")
-    public ResponseEntity<Bedroom> createBedroom(@Valid @RequestBody Bedroom bedroom) throws URISyntaxException {
+    public Mono<ResponseEntity<Bedroom>> createBedroom(@Valid @RequestBody Bedroom bedroom) throws URISyntaxException {
         LOG.debug("REST request to save Bedroom : {}", bedroom);
         if (bedroom.getId() != null) {
             throw new BadRequestAlertException("A new bedroom cannot already have an ID", ENTITY_NAME, "idexists");
         }
-        bedroom = bedroomService.save(bedroom);
-        return ResponseEntity.created(new URI("/api/bedrooms/" + bedroom.getId()))
-            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, bedroom.getId().toString()))
-            .body(bedroom);
+        return bedroomService
+            .save(bedroom)
+            .map(result -> {
+                try {
+                    return ResponseEntity.created(new URI("/api/bedrooms/" + result.getId()))
+                        .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
+                        .body(result);
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException(e);
+                }
+            });
     }
 
     /**
@@ -78,7 +89,7 @@ public class BedroomResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Bedroom> updateBedroom(
+    public Mono<ResponseEntity<Bedroom>> updateBedroom(
         @PathVariable(value = "id", required = false) final Long id,
         @Valid @RequestBody Bedroom bedroom
     ) throws URISyntaxException {
@@ -90,14 +101,22 @@ public class BedroomResource {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
-        if (!bedroomRepository.existsById(id)) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
-        }
+        return bedroomRepository
+            .existsById(id)
+            .flatMap(exists -> {
+                if (!exists) {
+                    return Mono.error(new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound"));
+                }
 
-        bedroom = bedroomService.update(bedroom);
-        return ResponseEntity.ok()
-            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, bedroom.getId().toString()))
-            .body(bedroom);
+                return bedroomService
+                    .update(bedroom)
+                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
+                    .map(result ->
+                        ResponseEntity.ok()
+                            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
+                            .body(result)
+                    );
+            });
     }
 
     /**
@@ -112,7 +131,7 @@ public class BedroomResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
-    public ResponseEntity<Bedroom> partialUpdateBedroom(
+    public Mono<ResponseEntity<Bedroom>> partialUpdateBedroom(
         @PathVariable(value = "id", required = false) final Long id,
         @NotNull @RequestBody Bedroom bedroom
     ) throws URISyntaxException {
@@ -124,30 +143,51 @@ public class BedroomResource {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
-        if (!bedroomRepository.existsById(id)) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
-        }
+        return bedroomRepository
+            .existsById(id)
+            .flatMap(exists -> {
+                if (!exists) {
+                    return Mono.error(new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound"));
+                }
 
-        Optional<Bedroom> result = bedroomService.partialUpdate(bedroom);
+                Mono<Bedroom> result = bedroomService.partialUpdate(bedroom);
 
-        return ResponseUtil.wrapOrNotFound(
-            result,
-            HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, bedroom.getId().toString())
-        );
+                return result
+                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
+                    .map(res ->
+                        ResponseEntity.ok()
+                            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, res.getId().toString()))
+                            .body(res)
+                    );
+            });
     }
 
     /**
      * {@code GET  /bedrooms} : get all the bedrooms.
      *
      * @param pageable the pagination information.
+     * @param request a {@link ServerHttpRequest} request.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of bedrooms in body.
      */
-    @GetMapping("")
-    public ResponseEntity<List<Bedroom>> getAllBedrooms(@org.springdoc.core.annotations.ParameterObject Pageable pageable) {
+    @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<List<Bedroom>>> getAllBedrooms(
+        @org.springdoc.core.annotations.ParameterObject Pageable pageable,
+        ServerHttpRequest request
+    ) {
         LOG.debug("REST request to get a page of Bedrooms");
-        Page<Bedroom> page = bedroomService.findAll(pageable);
-        HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
-        return ResponseEntity.ok().headers(headers).body(page.getContent());
+        return bedroomService
+            .countAll()
+            .zipWith(bedroomService.findAll(pageable).collectList())
+            .map(countWithEntities ->
+                ResponseEntity.ok()
+                    .headers(
+                        PaginationUtil.generatePaginationHttpHeaders(
+                            ForwardedHeaderUtils.adaptFromForwardedHeaders(request.getURI(), request.getHeaders()),
+                            new PageImpl<>(countWithEntities.getT2(), pageable, countWithEntities.getT1())
+                        )
+                    )
+                    .body(countWithEntities.getT2())
+            );
     }
 
     /**
@@ -157,9 +197,9 @@ public class BedroomResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the bedroom, or with status {@code 404 (Not Found)}.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Bedroom> getBedroom(@PathVariable("id") Long id) {
+    public Mono<ResponseEntity<Bedroom>> getBedroom(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Bedroom : {}", id);
-        Optional<Bedroom> bedroom = bedroomService.findOne(id);
+        Mono<Bedroom> bedroom = bedroomService.findOne(id);
         return ResponseUtil.wrapOrNotFound(bedroom);
     }
 
@@ -170,12 +210,17 @@ public class BedroomResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBedroom(@PathVariable("id") Long id) {
+    public Mono<ResponseEntity<Void>> deleteBedroom(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Bedroom : {}", id);
-        bedroomService.delete(id);
-        return ResponseEntity.noContent()
-            .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
-            .build();
+        return bedroomService
+            .delete(id)
+            .then(
+                Mono.just(
+                    ResponseEntity.noContent()
+                        .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
+                        .build()
+                )
+            );
     }
 
     /**
@@ -184,20 +229,25 @@ public class BedroomResource {
      *
      * @param query the query of the bedroom search.
      * @param pageable the pagination information.
+     * @param request a {@link ServerHttpRequest} request.
      * @return the result of the search.
      */
     @GetMapping("/_search")
-    public ResponseEntity<List<Bedroom>> searchBedrooms(
+    public Mono<ResponseEntity<Flux<Bedroom>>> searchBedrooms(
         @RequestParam("query") String query,
-        @org.springdoc.core.annotations.ParameterObject Pageable pageable
+        @org.springdoc.core.annotations.ParameterObject Pageable pageable,
+        ServerHttpRequest request
     ) {
         LOG.debug("REST request to search for a page of Bedrooms for query {}", query);
-        try {
-            Page<Bedroom> page = bedroomService.search(query, pageable);
-            HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
-            return ResponseEntity.ok().headers(headers).body(page.getContent());
-        } catch (RuntimeException e) {
-            throw ElasticsearchExceptionMapper.mapException(e);
-        }
+        return bedroomService
+            .searchCount()
+            .map(total -> new PageImpl<>(new ArrayList<>(), pageable, total))
+            .map(page ->
+                PaginationUtil.generatePaginationHttpHeaders(
+                    ForwardedHeaderUtils.adaptFromForwardedHeaders(request.getURI(), request.getHeaders()),
+                    page
+                )
+            )
+            .map(headers -> ResponseEntity.ok().headers(headers).body(bedroomService.search(query, pageable)));
     }
 }

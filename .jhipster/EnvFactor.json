@@ -1,6 +1,6 @@
 {
   "annotations": {
-    "changelogDate": "20241212041358"
+    "changelogDate": "20241223103520"
   },
   "applications": ["gateway", "reportservice"],
   "clientRootFolder": "reportservice",
@@ -8,11 +8,6 @@
   "fields": [
     {
       "fieldName": "id",
-      "fieldType": "Long",
-      "fieldValidateRules": ["required"]
-    },
-    {
-      "fieldName": "reportId",
       "fieldType": "Long",
       "fieldValidateRules": ["required"]
     },

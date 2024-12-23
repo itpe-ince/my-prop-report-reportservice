@@ -3,13 +3,13 @@ package com.dnc.mprs.reportservice.service;
 import com.dnc.mprs.reportservice.domain.Author;
 import com.dnc.mprs.reportservice.repository.AuthorRepository;
 import com.dnc.mprs.reportservice.repository.search.AuthorSearchRepository;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Service Implementation for managing {@link com.dnc.mprs.reportservice.domain.Author}.
@@ -35,11 +35,9 @@ public class AuthorService {
      * @param author the entity to save.
      * @return the persisted entity.
      */
-    public Author save(Author author) {
+    public Mono<Author> save(Author author) {
         LOG.debug("Request to save Author : {}", author);
-        author = authorRepository.save(author);
-        authorSearchRepository.index(author);
-        return author;
+        return authorRepository.save(author).flatMap(authorSearchRepository::save);
     }
 
     /**
@@ -48,11 +46,9 @@ public class AuthorService {
      * @param author the entity to save.
      * @return the persisted entity.
      */
-    public Author update(Author author) {
+    public Mono<Author> update(Author author) {
         LOG.debug("Request to update Author : {}", author);
-        author = authorRepository.save(author);
-        authorSearchRepository.index(author);
-        return author;
+        return authorRepository.save(author).flatMap(authorSearchRepository::save);
     }
 
     /**
@@ -61,7 +57,7 @@ public class AuthorService {
      * @param author the entity to update partially.
      * @return the persisted entity.
      */
-    public Optional<Author> partialUpdate(Author author) {
+    public Mono<Author> partialUpdate(Author author) {
         LOG.debug("Request to partially update Author : {}", author);
 
         return authorRepository
@@ -76,10 +72,10 @@ public class AuthorService {
 
                 return existingAuthor;
             })
-            .map(authorRepository::save)
-            .map(savedAuthor -> {
-                authorSearchRepository.index(savedAuthor);
-                return savedAuthor;
+            .flatMap(authorRepository::save)
+            .flatMap(savedAuthor -> {
+                authorSearchRepository.save(savedAuthor);
+                return Mono.just(savedAuthor);
             });
     }
 
@@ -90,9 +86,26 @@ public class AuthorService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Author> findAll(Pageable pageable) {
+    public Flux<Author> findAll(Pageable pageable) {
         LOG.debug("Request to get all Authors");
-        return authorRepository.findAll(pageable);
+        return authorRepository.findAllBy(pageable);
+    }
+
+    /**
+     * Returns the number of authors available.
+     * @return the number of entities in the database.
+     *
+     */
+    public Mono<Long> countAll() {
+        return authorRepository.count();
+    }
+
+    /**
+     * Returns the number of authors available in search repository.
+     *
+     */
+    public Mono<Long> searchCount() {
+        return authorSearchRepository.count();
     }
 
     /**
@@ -102,7 +115,7 @@ public class AuthorService {
      * @return the entity.
      */
     @Transactional(readOnly = true)
-    public Optional<Author> findOne(Long id) {
+    public Mono<Author> findOne(Long id) {
         LOG.debug("Request to get Author : {}", id);
         return authorRepository.findById(id);
     }
@@ -111,11 +124,11 @@ public class AuthorService {
      * Delete the author by id.
      *
      * @param id the id of the entity.
+     * @return a Mono to signal the deletion
      */
-    public void delete(Long id) {
+    public Mono<Void> delete(Long id) {
         LOG.debug("Request to delete Author : {}", id);
-        authorRepository.deleteById(id);
-        authorSearchRepository.deleteFromIndexById(id);
+        return authorRepository.deleteById(id).then(authorSearchRepository.deleteById(id));
     }
 
     /**
@@ -126,7 +139,7 @@ public class AuthorService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Author> search(String query, Pageable pageable) {
+    public Flux<Author> search(String query, Pageable pageable) {
         LOG.debug("Request to search for a page of Authors for query {}", query);
         return authorSearchRepository.search(query, pageable);
     }

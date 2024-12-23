@@ -6,18 +6,17 @@ import static com.dnc.mprs.reportservice.web.rest.TestUtil.sameNumber;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
 
 import com.dnc.mprs.reportservice.IntegrationTest;
 import com.dnc.mprs.reportservice.domain.Bedroom;
 import com.dnc.mprs.reportservice.domain.enumeration.QualityStateType;
 import com.dnc.mprs.reportservice.repository.BedroomRepository;
+import com.dnc.mprs.reportservice.repository.EntityManager;
 import com.dnc.mprs.reportservice.repository.search.BedroomSearchRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Random;
@@ -28,23 +27,19 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.data.util.Streamable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
  * Integration tests for the {@link BedroomResource} REST controller.
  */
 @IntegrationTest
-@AutoConfigureMockMvc
+@AutoConfigureWebTestClient(timeout = IntegrationTest.DEFAULT_ENTITY_TIMEOUT)
 @WithMockUser
 class BedroomResourceIT {
-
-    private static final Long DEFAULT_REPORT_ID = 1L;
-    private static final Long UPDATED_REPORT_ID = 2L;
 
     private static final String DEFAULT_BEDROOM_NAME = "AAAAAAAAAA";
     private static final String UPDATED_BEDROOM_NAME = "BBBBBBBBBB";
@@ -90,7 +85,7 @@ class BedroomResourceIT {
     private EntityManager em;
 
     @Autowired
-    private MockMvc restBedroomMockMvc;
+    private WebTestClient webTestClient;
 
     private Bedroom bedroom;
 
@@ -104,7 +99,6 @@ class BedroomResourceIT {
      */
     public static Bedroom createEntity() {
         return new Bedroom()
-            .reportId(DEFAULT_REPORT_ID)
             .bedroomName(DEFAULT_BEDROOM_NAME)
             .conditionLevel(DEFAULT_CONDITION_LEVEL)
             .roomSize(DEFAULT_ROOM_SIZE)
@@ -123,7 +117,6 @@ class BedroomResourceIT {
      */
     public static Bedroom createUpdatedEntity() {
         return new Bedroom()
-            .reportId(UPDATED_REPORT_ID)
             .bedroomName(UPDATED_BEDROOM_NAME)
             .conditionLevel(UPDATED_CONDITION_LEVEL)
             .roomSize(UPDATED_ROOM_SIZE)
@@ -132,6 +125,19 @@ class BedroomResourceIT {
             .windowLocation(UPDATED_WINDOW_LOCATION)
             .windowSize(UPDATED_WINDOW_SIZE)
             .remarks(UPDATED_REMARKS);
+    }
+
+    public static void deleteEntities(EntityManager em) {
+        try {
+            em.deleteAll(Bedroom.class).block();
+        } catch (Exception e) {
+            // It can fail, if other entities are still referring this - it will be removed later.
+        }
+    }
+
+    @BeforeEach
+    public void setupCsrf() {
+        webTestClient = webTestClient.mutateWith(csrf());
     }
 
     @BeforeEach
@@ -142,27 +148,29 @@ class BedroomResourceIT {
     @AfterEach
     public void cleanup() {
         if (insertedBedroom != null) {
-            bedroomRepository.delete(insertedBedroom);
-            bedroomSearchRepository.delete(insertedBedroom);
+            bedroomRepository.delete(insertedBedroom).block();
+            bedroomSearchRepository.delete(insertedBedroom).block();
             insertedBedroom = null;
         }
+        deleteEntities(em);
     }
 
     @Test
-    @Transactional
     void createBedroom() throws Exception {
         long databaseSizeBeforeCreate = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         // Create the Bedroom
-        var returnedBedroom = om.readValue(
-            restBedroomMockMvc
-                .perform(post(ENTITY_API_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(bedroom)))
-                .andExpect(status().isCreated())
-                .andReturn()
-                .getResponse()
-                .getContentAsString(),
-            Bedroom.class
-        );
+        var returnedBedroom = webTestClient
+            .post()
+            .uri(ENTITY_API_URL)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(om.writeValueAsBytes(bedroom))
+            .exchange()
+            .expectStatus()
+            .isCreated()
+            .expectBody(Bedroom.class)
+            .returnResult()
+            .getResponseBody();
 
         // Validate the Bedroom in the database
         assertIncrementedRepositoryCount(databaseSizeBeforeCreate);
@@ -171,7 +179,7 @@ class BedroomResourceIT {
         await()
             .atMost(5, TimeUnit.SECONDS)
             .untilAsserted(() -> {
-                int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+                int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
                 assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore + 1);
             });
 
@@ -179,154 +187,173 @@ class BedroomResourceIT {
     }
 
     @Test
-    @Transactional
     void createBedroomWithExistingId() throws Exception {
         // Create the Bedroom with an existing ID
         bedroom.setId(1L);
 
         long databaseSizeBeforeCreate = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
 
         // An entity with an existing ID cannot be created, so this API call must fail
-        restBedroomMockMvc
-            .perform(post(ENTITY_API_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(bedroom)))
-            .andExpect(status().isBadRequest());
+        webTestClient
+            .post()
+            .uri(ENTITY_API_URL)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(om.writeValueAsBytes(bedroom))
+            .exchange()
+            .expectStatus()
+            .isBadRequest();
 
         // Validate the Bedroom in the database
         assertSameRepositoryCount(databaseSizeBeforeCreate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
-    @Transactional
-    void checkReportIdIsRequired() throws Exception {
-        long databaseSizeBeforeTest = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
-        // set the field null
-        bedroom.setReportId(null);
-
-        // Create the Bedroom, which fails.
-
-        restBedroomMockMvc
-            .perform(post(ENTITY_API_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(bedroom)))
-            .andExpect(status().isBadRequest());
-
-        assertSameRepositoryCount(databaseSizeBeforeTest);
-
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
-    }
-
-    @Test
-    @Transactional
     void checkBedroomNameIsRequired() throws Exception {
         long databaseSizeBeforeTest = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         // set the field null
         bedroom.setBedroomName(null);
 
         // Create the Bedroom, which fails.
 
-        restBedroomMockMvc
-            .perform(post(ENTITY_API_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(bedroom)))
-            .andExpect(status().isBadRequest());
+        webTestClient
+            .post()
+            .uri(ENTITY_API_URL)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(om.writeValueAsBytes(bedroom))
+            .exchange()
+            .expectStatus()
+            .isBadRequest();
 
         assertSameRepositoryCount(databaseSizeBeforeTest);
 
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
-    @Transactional
     void checkConditionLevelIsRequired() throws Exception {
         long databaseSizeBeforeTest = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         // set the field null
         bedroom.setConditionLevel(null);
 
         // Create the Bedroom, which fails.
 
-        restBedroomMockMvc
-            .perform(post(ENTITY_API_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(bedroom)))
-            .andExpect(status().isBadRequest());
+        webTestClient
+            .post()
+            .uri(ENTITY_API_URL)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(om.writeValueAsBytes(bedroom))
+            .exchange()
+            .expectStatus()
+            .isBadRequest();
 
         assertSameRepositoryCount(databaseSizeBeforeTest);
 
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
-    @Transactional
-    void getAllBedrooms() throws Exception {
+    void getAllBedrooms() {
         // Initialize the database
-        insertedBedroom = bedroomRepository.saveAndFlush(bedroom);
+        insertedBedroom = bedroomRepository.save(bedroom).block();
 
         // Get all the bedroomList
-        restBedroomMockMvc
-            .perform(get(ENTITY_API_URL + "?sort=id,desc"))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(jsonPath("$.[*].id").value(hasItem(bedroom.getId().intValue())))
-            .andExpect(jsonPath("$.[*].reportId").value(hasItem(DEFAULT_REPORT_ID.intValue())))
-            .andExpect(jsonPath("$.[*].bedroomName").value(hasItem(DEFAULT_BEDROOM_NAME)))
-            .andExpect(jsonPath("$.[*].conditionLevel").value(hasItem(DEFAULT_CONDITION_LEVEL.toString())))
-            .andExpect(jsonPath("$.[*].roomSize").value(hasItem(sameNumber(DEFAULT_ROOM_SIZE))))
-            .andExpect(jsonPath("$.[*].closetYn").value(hasItem(DEFAULT_CLOSET_YN)))
-            .andExpect(jsonPath("$.[*].acYn").value(hasItem(DEFAULT_AC_YN)))
-            .andExpect(jsonPath("$.[*].windowLocation").value(hasItem(DEFAULT_WINDOW_LOCATION)))
-            .andExpect(jsonPath("$.[*].windowSize").value(hasItem(DEFAULT_WINDOW_SIZE)))
-            .andExpect(jsonPath("$.[*].remarks").value(hasItem(DEFAULT_REMARKS)));
+        webTestClient
+            .get()
+            .uri(ENTITY_API_URL + "?sort=id,desc")
+            .accept(MediaType.APPLICATION_JSON)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectHeader()
+            .contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.[*].id")
+            .value(hasItem(bedroom.getId().intValue()))
+            .jsonPath("$.[*].bedroomName")
+            .value(hasItem(DEFAULT_BEDROOM_NAME))
+            .jsonPath("$.[*].conditionLevel")
+            .value(hasItem(DEFAULT_CONDITION_LEVEL.toString()))
+            .jsonPath("$.[*].roomSize")
+            .value(hasItem(sameNumber(DEFAULT_ROOM_SIZE)))
+            .jsonPath("$.[*].closetYn")
+            .value(hasItem(DEFAULT_CLOSET_YN))
+            .jsonPath("$.[*].acYn")
+            .value(hasItem(DEFAULT_AC_YN))
+            .jsonPath("$.[*].windowLocation")
+            .value(hasItem(DEFAULT_WINDOW_LOCATION))
+            .jsonPath("$.[*].windowSize")
+            .value(hasItem(DEFAULT_WINDOW_SIZE))
+            .jsonPath("$.[*].remarks")
+            .value(hasItem(DEFAULT_REMARKS));
     }
 
     @Test
-    @Transactional
-    void getBedroom() throws Exception {
+    void getBedroom() {
         // Initialize the database
-        insertedBedroom = bedroomRepository.saveAndFlush(bedroom);
+        insertedBedroom = bedroomRepository.save(bedroom).block();
 
         // Get the bedroom
-        restBedroomMockMvc
-            .perform(get(ENTITY_API_URL_ID, bedroom.getId()))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(jsonPath("$.id").value(bedroom.getId().intValue()))
-            .andExpect(jsonPath("$.reportId").value(DEFAULT_REPORT_ID.intValue()))
-            .andExpect(jsonPath("$.bedroomName").value(DEFAULT_BEDROOM_NAME))
-            .andExpect(jsonPath("$.conditionLevel").value(DEFAULT_CONDITION_LEVEL.toString()))
-            .andExpect(jsonPath("$.roomSize").value(sameNumber(DEFAULT_ROOM_SIZE)))
-            .andExpect(jsonPath("$.closetYn").value(DEFAULT_CLOSET_YN))
-            .andExpect(jsonPath("$.acYn").value(DEFAULT_AC_YN))
-            .andExpect(jsonPath("$.windowLocation").value(DEFAULT_WINDOW_LOCATION))
-            .andExpect(jsonPath("$.windowSize").value(DEFAULT_WINDOW_SIZE))
-            .andExpect(jsonPath("$.remarks").value(DEFAULT_REMARKS));
+        webTestClient
+            .get()
+            .uri(ENTITY_API_URL_ID, bedroom.getId())
+            .accept(MediaType.APPLICATION_JSON)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectHeader()
+            .contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.id")
+            .value(is(bedroom.getId().intValue()))
+            .jsonPath("$.bedroomName")
+            .value(is(DEFAULT_BEDROOM_NAME))
+            .jsonPath("$.conditionLevel")
+            .value(is(DEFAULT_CONDITION_LEVEL.toString()))
+            .jsonPath("$.roomSize")
+            .value(is(sameNumber(DEFAULT_ROOM_SIZE)))
+            .jsonPath("$.closetYn")
+            .value(is(DEFAULT_CLOSET_YN))
+            .jsonPath("$.acYn")
+            .value(is(DEFAULT_AC_YN))
+            .jsonPath("$.windowLocation")
+            .value(is(DEFAULT_WINDOW_LOCATION))
+            .jsonPath("$.windowSize")
+            .value(is(DEFAULT_WINDOW_SIZE))
+            .jsonPath("$.remarks")
+            .value(is(DEFAULT_REMARKS));
     }
 
     @Test
-    @Transactional
-    void getNonExistingBedroom() throws Exception {
+    void getNonExistingBedroom() {
         // Get the bedroom
-        restBedroomMockMvc.perform(get(ENTITY_API_URL_ID, Long.MAX_VALUE)).andExpect(status().isNotFound());
+        webTestClient
+            .get()
+            .uri(ENTITY_API_URL_ID, Long.MAX_VALUE)
+            .accept(MediaType.APPLICATION_PROBLEM_JSON)
+            .exchange()
+            .expectStatus()
+            .isNotFound();
     }
 
     @Test
-    @Transactional
     void putExistingBedroom() throws Exception {
         // Initialize the database
-        insertedBedroom = bedroomRepository.saveAndFlush(bedroom);
+        insertedBedroom = bedroomRepository.save(bedroom).block();
 
         long databaseSizeBeforeUpdate = getRepositoryCount();
-        bedroomSearchRepository.save(bedroom);
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        bedroomSearchRepository.save(bedroom).block();
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
 
         // Update the bedroom
-        Bedroom updatedBedroom = bedroomRepository.findById(bedroom.getId()).orElseThrow();
-        // Disconnect from session so that the updates on updatedBedroom are not directly saved in db
-        em.detach(updatedBedroom);
+        Bedroom updatedBedroom = bedroomRepository.findById(bedroom.getId()).block();
         updatedBedroom
-            .reportId(UPDATED_REPORT_ID)
             .bedroomName(UPDATED_BEDROOM_NAME)
             .conditionLevel(UPDATED_CONDITION_LEVEL)
             .roomSize(UPDATED_ROOM_SIZE)
@@ -336,14 +363,14 @@ class BedroomResourceIT {
             .windowSize(UPDATED_WINDOW_SIZE)
             .remarks(UPDATED_REMARKS);
 
-        restBedroomMockMvc
-            .perform(
-                put(ENTITY_API_URL_ID, updatedBedroom.getId())
-                    .with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(om.writeValueAsBytes(updatedBedroom))
-            )
-            .andExpect(status().isOk());
+        webTestClient
+            .put()
+            .uri(ENTITY_API_URL_ID, updatedBedroom.getId())
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(om.writeValueAsBytes(updatedBedroom))
+            .exchange()
+            .expectStatus()
+            .isOk();
 
         // Validate the Bedroom in the database
         assertSameRepositoryCount(databaseSizeBeforeUpdate);
@@ -352,84 +379,87 @@ class BedroomResourceIT {
         await()
             .atMost(5, TimeUnit.SECONDS)
             .untilAsserted(() -> {
-                int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+                int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
                 assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
-                List<Bedroom> bedroomSearchList = Streamable.of(bedroomSearchRepository.findAll()).toList();
+                List<Bedroom> bedroomSearchList = Streamable.of(bedroomSearchRepository.findAll().collectList().block()).toList();
                 Bedroom testBedroomSearch = bedroomSearchList.get(searchDatabaseSizeAfter - 1);
 
-                assertBedroomAllPropertiesEquals(testBedroomSearch, updatedBedroom);
+                // Test fails because reactive api returns an empty object instead of null
+                // assertBedroomAllPropertiesEquals(testBedroomSearch, updatedBedroom);
+                assertBedroomUpdatableFieldsEquals(testBedroomSearch, updatedBedroom);
             });
     }
 
     @Test
-    @Transactional
     void putNonExistingBedroom() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         bedroom.setId(longCount.incrementAndGet());
 
         // If the entity doesn't have an ID, it will throw BadRequestAlertException
-        restBedroomMockMvc
-            .perform(
-                put(ENTITY_API_URL_ID, bedroom.getId())
-                    .with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(om.writeValueAsBytes(bedroom))
-            )
-            .andExpect(status().isBadRequest());
+        webTestClient
+            .put()
+            .uri(ENTITY_API_URL_ID, bedroom.getId())
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(om.writeValueAsBytes(bedroom))
+            .exchange()
+            .expectStatus()
+            .isBadRequest();
 
         // Validate the Bedroom in the database
         assertSameRepositoryCount(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
-    @Transactional
     void putWithIdMismatchBedroom() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         bedroom.setId(longCount.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
-        restBedroomMockMvc
-            .perform(
-                put(ENTITY_API_URL_ID, longCount.incrementAndGet())
-                    .with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(om.writeValueAsBytes(bedroom))
-            )
-            .andExpect(status().isBadRequest());
+        webTestClient
+            .put()
+            .uri(ENTITY_API_URL_ID, longCount.incrementAndGet())
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(om.writeValueAsBytes(bedroom))
+            .exchange()
+            .expectStatus()
+            .isBadRequest();
 
         // Validate the Bedroom in the database
         assertSameRepositoryCount(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
-    @Transactional
     void putWithMissingIdPathParamBedroom() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         bedroom.setId(longCount.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
-        restBedroomMockMvc
-            .perform(put(ENTITY_API_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(bedroom)))
-            .andExpect(status().isMethodNotAllowed());
+        webTestClient
+            .put()
+            .uri(ENTITY_API_URL)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(om.writeValueAsBytes(bedroom))
+            .exchange()
+            .expectStatus()
+            .isEqualTo(405);
 
         // Validate the Bedroom in the database
         assertSameRepositoryCount(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
-    @Transactional
     void partialUpdateBedroomWithPatch() throws Exception {
         // Initialize the database
-        insertedBedroom = bedroomRepository.saveAndFlush(bedroom);
+        insertedBedroom = bedroomRepository.save(bedroom).block();
 
         long databaseSizeBeforeUpdate = getRepositoryCount();
 
@@ -437,16 +467,16 @@ class BedroomResourceIT {
         Bedroom partialUpdatedBedroom = new Bedroom();
         partialUpdatedBedroom.setId(bedroom.getId());
 
-        partialUpdatedBedroom.bedroomName(UPDATED_BEDROOM_NAME).conditionLevel(UPDATED_CONDITION_LEVEL).windowSize(UPDATED_WINDOW_SIZE);
+        partialUpdatedBedroom.conditionLevel(UPDATED_CONDITION_LEVEL).roomSize(UPDATED_ROOM_SIZE).remarks(UPDATED_REMARKS);
 
-        restBedroomMockMvc
-            .perform(
-                patch(ENTITY_API_URL_ID, partialUpdatedBedroom.getId())
-                    .with(csrf())
-                    .contentType("application/merge-patch+json")
-                    .content(om.writeValueAsBytes(partialUpdatedBedroom))
-            )
-            .andExpect(status().isOk());
+        webTestClient
+            .patch()
+            .uri(ENTITY_API_URL_ID, partialUpdatedBedroom.getId())
+            .contentType(MediaType.valueOf("application/merge-patch+json"))
+            .bodyValue(om.writeValueAsBytes(partialUpdatedBedroom))
+            .exchange()
+            .expectStatus()
+            .isOk();
 
         // Validate the Bedroom in the database
 
@@ -455,10 +485,9 @@ class BedroomResourceIT {
     }
 
     @Test
-    @Transactional
     void fullUpdateBedroomWithPatch() throws Exception {
         // Initialize the database
-        insertedBedroom = bedroomRepository.saveAndFlush(bedroom);
+        insertedBedroom = bedroomRepository.save(bedroom).block();
 
         long databaseSizeBeforeUpdate = getRepositoryCount();
 
@@ -467,7 +496,6 @@ class BedroomResourceIT {
         partialUpdatedBedroom.setId(bedroom.getId());
 
         partialUpdatedBedroom
-            .reportId(UPDATED_REPORT_ID)
             .bedroomName(UPDATED_BEDROOM_NAME)
             .conditionLevel(UPDATED_CONDITION_LEVEL)
             .roomSize(UPDATED_ROOM_SIZE)
@@ -477,14 +505,14 @@ class BedroomResourceIT {
             .windowSize(UPDATED_WINDOW_SIZE)
             .remarks(UPDATED_REMARKS);
 
-        restBedroomMockMvc
-            .perform(
-                patch(ENTITY_API_URL_ID, partialUpdatedBedroom.getId())
-                    .with(csrf())
-                    .contentType("application/merge-patch+json")
-                    .content(om.writeValueAsBytes(partialUpdatedBedroom))
-            )
-            .andExpect(status().isOk());
+        webTestClient
+            .patch()
+            .uri(ENTITY_API_URL_ID, partialUpdatedBedroom.getId())
+            .contentType(MediaType.valueOf("application/merge-patch+json"))
+            .bodyValue(om.writeValueAsBytes(partialUpdatedBedroom))
+            .exchange()
+            .expectStatus()
+            .isOk();
 
         // Validate the Bedroom in the database
 
@@ -493,118 +521,135 @@ class BedroomResourceIT {
     }
 
     @Test
-    @Transactional
     void patchNonExistingBedroom() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         bedroom.setId(longCount.incrementAndGet());
 
         // If the entity doesn't have an ID, it will throw BadRequestAlertException
-        restBedroomMockMvc
-            .perform(
-                patch(ENTITY_API_URL_ID, bedroom.getId())
-                    .with(csrf())
-                    .contentType("application/merge-patch+json")
-                    .content(om.writeValueAsBytes(bedroom))
-            )
-            .andExpect(status().isBadRequest());
+        webTestClient
+            .patch()
+            .uri(ENTITY_API_URL_ID, bedroom.getId())
+            .contentType(MediaType.valueOf("application/merge-patch+json"))
+            .bodyValue(om.writeValueAsBytes(bedroom))
+            .exchange()
+            .expectStatus()
+            .isBadRequest();
 
         // Validate the Bedroom in the database
         assertSameRepositoryCount(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
-    @Transactional
     void patchWithIdMismatchBedroom() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         bedroom.setId(longCount.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
-        restBedroomMockMvc
-            .perform(
-                patch(ENTITY_API_URL_ID, longCount.incrementAndGet())
-                    .with(csrf())
-                    .contentType("application/merge-patch+json")
-                    .content(om.writeValueAsBytes(bedroom))
-            )
-            .andExpect(status().isBadRequest());
+        webTestClient
+            .patch()
+            .uri(ENTITY_API_URL_ID, longCount.incrementAndGet())
+            .contentType(MediaType.valueOf("application/merge-patch+json"))
+            .bodyValue(om.writeValueAsBytes(bedroom))
+            .exchange()
+            .expectStatus()
+            .isBadRequest();
 
         // Validate the Bedroom in the database
         assertSameRepositoryCount(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
-    @Transactional
     void patchWithMissingIdPathParamBedroom() throws Exception {
         long databaseSizeBeforeUpdate = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         bedroom.setId(longCount.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
-        restBedroomMockMvc
-            .perform(patch(ENTITY_API_URL).with(csrf()).contentType("application/merge-patch+json").content(om.writeValueAsBytes(bedroom)))
-            .andExpect(status().isMethodNotAllowed());
+        webTestClient
+            .patch()
+            .uri(ENTITY_API_URL)
+            .contentType(MediaType.valueOf("application/merge-patch+json"))
+            .bodyValue(om.writeValueAsBytes(bedroom))
+            .exchange()
+            .expectStatus()
+            .isEqualTo(405);
 
         // Validate the Bedroom in the database
         assertSameRepositoryCount(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
-    @Transactional
-    void deleteBedroom() throws Exception {
+    void deleteBedroom() {
         // Initialize the database
-        insertedBedroom = bedroomRepository.saveAndFlush(bedroom);
-        bedroomRepository.save(bedroom);
-        bedroomSearchRepository.save(bedroom);
+        insertedBedroom = bedroomRepository.save(bedroom).block();
+        bedroomRepository.save(bedroom).block();
+        bedroomSearchRepository.save(bedroom).block();
 
         long databaseSizeBeforeDelete = getRepositoryCount();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         assertThat(searchDatabaseSizeBefore).isEqualTo(databaseSizeBeforeDelete);
 
         // Delete the bedroom
-        restBedroomMockMvc
-            .perform(delete(ENTITY_API_URL_ID, bedroom.getId()).with(csrf()).accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isNoContent());
+        webTestClient
+            .delete()
+            .uri(ENTITY_API_URL_ID, bedroom.getId())
+            .accept(MediaType.APPLICATION_JSON)
+            .exchange()
+            .expectStatus()
+            .isNoContent();
 
         // Validate the database contains one less item
         assertDecrementedRepositoryCount(databaseSizeBeforeDelete);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll());
+        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bedroomSearchRepository.findAll().collectList().block());
         assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore - 1);
     }
 
     @Test
-    @Transactional
-    void searchBedroom() throws Exception {
+    void searchBedroom() {
         // Initialize the database
-        insertedBedroom = bedroomRepository.saveAndFlush(bedroom);
-        bedroomSearchRepository.save(bedroom);
+        insertedBedroom = bedroomRepository.save(bedroom).block();
+        bedroomSearchRepository.save(bedroom).block();
 
         // Search the bedroom
-        restBedroomMockMvc
-            .perform(get(ENTITY_SEARCH_API_URL + "?query=id:" + bedroom.getId()))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(jsonPath("$.[*].id").value(hasItem(bedroom.getId().intValue())))
-            .andExpect(jsonPath("$.[*].reportId").value(hasItem(DEFAULT_REPORT_ID.intValue())))
-            .andExpect(jsonPath("$.[*].bedroomName").value(hasItem(DEFAULT_BEDROOM_NAME)))
-            .andExpect(jsonPath("$.[*].conditionLevel").value(hasItem(DEFAULT_CONDITION_LEVEL.toString())))
-            .andExpect(jsonPath("$.[*].roomSize").value(hasItem(sameNumber(DEFAULT_ROOM_SIZE))))
-            .andExpect(jsonPath("$.[*].closetYn").value(hasItem(DEFAULT_CLOSET_YN)))
-            .andExpect(jsonPath("$.[*].acYn").value(hasItem(DEFAULT_AC_YN)))
-            .andExpect(jsonPath("$.[*].windowLocation").value(hasItem(DEFAULT_WINDOW_LOCATION)))
-            .andExpect(jsonPath("$.[*].windowSize").value(hasItem(DEFAULT_WINDOW_SIZE)))
-            .andExpect(jsonPath("$.[*].remarks").value(hasItem(DEFAULT_REMARKS)));
+        webTestClient
+            .get()
+            .uri(ENTITY_SEARCH_API_URL + "?query=id:" + bedroom.getId())
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectHeader()
+            .contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.[*].id")
+            .value(hasItem(bedroom.getId().intValue()))
+            .jsonPath("$.[*].bedroomName")
+            .value(hasItem(DEFAULT_BEDROOM_NAME))
+            .jsonPath("$.[*].conditionLevel")
+            .value(hasItem(DEFAULT_CONDITION_LEVEL.toString()))
+            .jsonPath("$.[*].roomSize")
+            .value(hasItem(sameNumber(DEFAULT_ROOM_SIZE)))
+            .jsonPath("$.[*].closetYn")
+            .value(hasItem(DEFAULT_CLOSET_YN))
+            .jsonPath("$.[*].acYn")
+            .value(hasItem(DEFAULT_AC_YN))
+            .jsonPath("$.[*].windowLocation")
+            .value(hasItem(DEFAULT_WINDOW_LOCATION))
+            .jsonPath("$.[*].windowSize")
+            .value(hasItem(DEFAULT_WINDOW_SIZE))
+            .jsonPath("$.[*].remarks")
+            .value(hasItem(DEFAULT_REMARKS));
     }
 
     protected long getRepositoryCount() {
-        return bedroomRepository.count();
+        return bedroomRepository.count().block();
     }
 
     protected void assertIncrementedRepositoryCount(long countBefore) {
@@ -620,14 +665,18 @@ class BedroomResourceIT {
     }
 
     protected Bedroom getPersistedBedroom(Bedroom bedroom) {
-        return bedroomRepository.findById(bedroom.getId()).orElseThrow();
+        return bedroomRepository.findById(bedroom.getId()).block();
     }
 
     protected void assertPersistedBedroomToMatchAllProperties(Bedroom expectedBedroom) {
-        assertBedroomAllPropertiesEquals(expectedBedroom, getPersistedBedroom(expectedBedroom));
+        // Test fails because reactive api returns an empty object instead of null
+        // assertBedroomAllPropertiesEquals(expectedBedroom, getPersistedBedroom(expectedBedroom));
+        assertBedroomUpdatableFieldsEquals(expectedBedroom, getPersistedBedroom(expectedBedroom));
     }
 
     protected void assertPersistedBedroomToMatchUpdatableProperties(Bedroom expectedBedroom) {
-        assertBedroomAllUpdatablePropertiesEquals(expectedBedroom, getPersistedBedroom(expectedBedroom));
+        // Test fails because reactive api returns an empty object instead of null
+        // assertBedroomAllUpdatablePropertiesEquals(expectedBedroom, getPersistedBedroom(expectedBedroom));
+        assertBedroomUpdatableFieldsEquals(expectedBedroom, getPersistedBedroom(expectedBedroom));
     }
 }

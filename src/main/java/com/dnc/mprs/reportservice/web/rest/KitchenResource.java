@@ -4,26 +4,30 @@ import com.dnc.mprs.reportservice.domain.Kitchen;
 import com.dnc.mprs.reportservice.repository.KitchenRepository;
 import com.dnc.mprs.reportservice.service.KitchenService;
 import com.dnc.mprs.reportservice.web.rest.errors.BadRequestAlertException;
-import com.dnc.mprs.reportservice.web.rest.errors.ElasticsearchExceptionMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.ForwardedHeaderUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.PaginationUtil;
-import tech.jhipster.web.util.ResponseUtil;
+import tech.jhipster.web.util.reactive.ResponseUtil;
 
 /**
  * REST controller for managing {@link com.dnc.mprs.reportservice.domain.Kitchen}.
@@ -56,15 +60,22 @@ public class KitchenResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PostMapping("")
-    public ResponseEntity<Kitchen> createKitchen(@Valid @RequestBody Kitchen kitchen) throws URISyntaxException {
+    public Mono<ResponseEntity<Kitchen>> createKitchen(@Valid @RequestBody Kitchen kitchen) throws URISyntaxException {
         LOG.debug("REST request to save Kitchen : {}", kitchen);
         if (kitchen.getId() != null) {
             throw new BadRequestAlertException("A new kitchen cannot already have an ID", ENTITY_NAME, "idexists");
         }
-        kitchen = kitchenService.save(kitchen);
-        return ResponseEntity.created(new URI("/api/kitchens/" + kitchen.getId()))
-            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, kitchen.getId().toString()))
-            .body(kitchen);
+        return kitchenService
+            .save(kitchen)
+            .map(result -> {
+                try {
+                    return ResponseEntity.created(new URI("/api/kitchens/" + result.getId()))
+                        .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
+                        .body(result);
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException(e);
+                }
+            });
     }
 
     /**
@@ -78,7 +89,7 @@ public class KitchenResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Kitchen> updateKitchen(
+    public Mono<ResponseEntity<Kitchen>> updateKitchen(
         @PathVariable(value = "id", required = false) final Long id,
         @Valid @RequestBody Kitchen kitchen
     ) throws URISyntaxException {
@@ -90,14 +101,22 @@ public class KitchenResource {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
-        if (!kitchenRepository.existsById(id)) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
-        }
+        return kitchenRepository
+            .existsById(id)
+            .flatMap(exists -> {
+                if (!exists) {
+                    return Mono.error(new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound"));
+                }
 
-        kitchen = kitchenService.update(kitchen);
-        return ResponseEntity.ok()
-            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, kitchen.getId().toString()))
-            .body(kitchen);
+                return kitchenService
+                    .update(kitchen)
+                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
+                    .map(result ->
+                        ResponseEntity.ok()
+                            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
+                            .body(result)
+                    );
+            });
     }
 
     /**
@@ -112,7 +131,7 @@ public class KitchenResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
-    public ResponseEntity<Kitchen> partialUpdateKitchen(
+    public Mono<ResponseEntity<Kitchen>> partialUpdateKitchen(
         @PathVariable(value = "id", required = false) final Long id,
         @NotNull @RequestBody Kitchen kitchen
     ) throws URISyntaxException {
@@ -124,30 +143,51 @@ public class KitchenResource {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
-        if (!kitchenRepository.existsById(id)) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
-        }
+        return kitchenRepository
+            .existsById(id)
+            .flatMap(exists -> {
+                if (!exists) {
+                    return Mono.error(new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound"));
+                }
 
-        Optional<Kitchen> result = kitchenService.partialUpdate(kitchen);
+                Mono<Kitchen> result = kitchenService.partialUpdate(kitchen);
 
-        return ResponseUtil.wrapOrNotFound(
-            result,
-            HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, kitchen.getId().toString())
-        );
+                return result
+                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
+                    .map(res ->
+                        ResponseEntity.ok()
+                            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, res.getId().toString()))
+                            .body(res)
+                    );
+            });
     }
 
     /**
      * {@code GET  /kitchens} : get all the kitchens.
      *
      * @param pageable the pagination information.
+     * @param request a {@link ServerHttpRequest} request.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of kitchens in body.
      */
-    @GetMapping("")
-    public ResponseEntity<List<Kitchen>> getAllKitchens(@org.springdoc.core.annotations.ParameterObject Pageable pageable) {
+    @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<List<Kitchen>>> getAllKitchens(
+        @org.springdoc.core.annotations.ParameterObject Pageable pageable,
+        ServerHttpRequest request
+    ) {
         LOG.debug("REST request to get a page of Kitchens");
-        Page<Kitchen> page = kitchenService.findAll(pageable);
-        HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
-        return ResponseEntity.ok().headers(headers).body(page.getContent());
+        return kitchenService
+            .countAll()
+            .zipWith(kitchenService.findAll(pageable).collectList())
+            .map(countWithEntities ->
+                ResponseEntity.ok()
+                    .headers(
+                        PaginationUtil.generatePaginationHttpHeaders(
+                            ForwardedHeaderUtils.adaptFromForwardedHeaders(request.getURI(), request.getHeaders()),
+                            new PageImpl<>(countWithEntities.getT2(), pageable, countWithEntities.getT1())
+                        )
+                    )
+                    .body(countWithEntities.getT2())
+            );
     }
 
     /**
@@ -157,9 +197,9 @@ public class KitchenResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the kitchen, or with status {@code 404 (Not Found)}.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Kitchen> getKitchen(@PathVariable("id") Long id) {
+    public Mono<ResponseEntity<Kitchen>> getKitchen(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Kitchen : {}", id);
-        Optional<Kitchen> kitchen = kitchenService.findOne(id);
+        Mono<Kitchen> kitchen = kitchenService.findOne(id);
         return ResponseUtil.wrapOrNotFound(kitchen);
     }
 
@@ -170,12 +210,17 @@ public class KitchenResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteKitchen(@PathVariable("id") Long id) {
+    public Mono<ResponseEntity<Void>> deleteKitchen(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Kitchen : {}", id);
-        kitchenService.delete(id);
-        return ResponseEntity.noContent()
-            .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
-            .build();
+        return kitchenService
+            .delete(id)
+            .then(
+                Mono.just(
+                    ResponseEntity.noContent()
+                        .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
+                        .build()
+                )
+            );
     }
 
     /**
@@ -184,20 +229,25 @@ public class KitchenResource {
      *
      * @param query the query of the kitchen search.
      * @param pageable the pagination information.
+     * @param request a {@link ServerHttpRequest} request.
      * @return the result of the search.
      */
     @GetMapping("/_search")
-    public ResponseEntity<List<Kitchen>> searchKitchens(
+    public Mono<ResponseEntity<Flux<Kitchen>>> searchKitchens(
         @RequestParam("query") String query,
-        @org.springdoc.core.annotations.ParameterObject Pageable pageable
+        @org.springdoc.core.annotations.ParameterObject Pageable pageable,
+        ServerHttpRequest request
     ) {
         LOG.debug("REST request to search for a page of Kitchens for query {}", query);
-        try {
-            Page<Kitchen> page = kitchenService.search(query, pageable);
-            HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
-            return ResponseEntity.ok().headers(headers).body(page.getContent());
-        } catch (RuntimeException e) {
-            throw ElasticsearchExceptionMapper.mapException(e);
-        }
+        return kitchenService
+            .searchCount()
+            .map(total -> new PageImpl<>(new ArrayList<>(), pageable, total))
+            .map(page ->
+                PaginationUtil.generatePaginationHttpHeaders(
+                    ForwardedHeaderUtils.adaptFromForwardedHeaders(request.getURI(), request.getHeaders()),
+                    page
+                )
+            )
+            .map(headers -> ResponseEntity.ok().headers(headers).body(kitchenService.search(query, pageable)));
     }
 }

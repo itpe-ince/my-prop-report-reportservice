@@ -48,7 +48,6 @@ public class EnvFactorAsserts {
     public static void assertEnvFactorUpdatableFieldsEquals(EnvFactor expected, EnvFactor actual) {
         assertThat(expected)
             .as("Verify EnvFactor relevant properties")
-            .satisfies(e -> assertThat(e.getReportId()).as("check reportId").isEqualTo(actual.getReportId()))
             .satisfies(e -> assertThat(e.getEnvFactorName()).as("check envFactorName").isEqualTo(actual.getEnvFactorName()))
             .satisfies(e ->
                 assertThat(e.getEnvFactorDistance())

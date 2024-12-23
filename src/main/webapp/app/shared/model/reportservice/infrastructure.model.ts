@@ -4,7 +4,6 @@ import { QualityStateType } from 'app/shared/model/enumerations/quality-state-ty
 
 export interface IInfrastructure {
   id?: number;
-  reportId?: number;
   infraType?: keyof typeof InfraType;
   infraName?: string;
   conditionLevel?: keyof typeof QualityStateType;

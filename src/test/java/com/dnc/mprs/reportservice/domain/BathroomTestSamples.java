@@ -12,7 +12,6 @@ public class BathroomTestSamples {
     public static Bathroom getBathroomSample1() {
         return new Bathroom()
             .id(1L)
-            .reportId(1L)
             .bathroomName("bathroomName1")
             .showerBoothPresence("showerBoothPresence1")
             .bathtubPresence("bathtubPresence1")
@@ -22,7 +21,6 @@ public class BathroomTestSamples {
     public static Bathroom getBathroomSample2() {
         return new Bathroom()
             .id(2L)
-            .reportId(2L)
             .bathroomName("bathroomName2")
             .showerBoothPresence("showerBoothPresence2")
             .bathtubPresence("bathtubPresence2")
@@ -32,7 +30,6 @@ public class BathroomTestSamples {
     public static Bathroom getBathroomRandomSampleGenerator() {
         return new Bathroom()
             .id(longCount.incrementAndGet())
-            .reportId(longCount.incrementAndGet())
             .bathroomName(UUID.randomUUID().toString())
             .showerBoothPresence(UUID.randomUUID().toString())
             .bathtubPresence(UUID.randomUUID().toString())

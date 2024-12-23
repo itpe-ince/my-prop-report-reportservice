@@ -32,12 +32,6 @@ export const BathroomDetail = () => {
           </dt>
           <dd>{bathroomEntity.id}</dd>
           <dt>
-            <span id="reportId">
-              <Translate contentKey="reportserviceApp.reportserviceBathroom.reportId">Report Id</Translate>
-            </span>
-          </dt>
-          <dd>{bathroomEntity.reportId}</dd>
-          <dt>
             <span id="bathroomName">
               <Translate contentKey="reportserviceApp.reportserviceBathroom.bathroomName">Bathroom Name</Translate>
             </span>

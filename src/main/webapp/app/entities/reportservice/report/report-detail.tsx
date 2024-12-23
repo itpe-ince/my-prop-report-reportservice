@@ -45,12 +45,6 @@ export const ReportDetail = () => {
           </dt>
           <dd>{reportEntity.reportDate ? <TextFormat value={reportEntity.reportDate} type="date" format={APP_DATE_FORMAT} /> : null}</dd>
           <dt>
-            <span id="authorId">
-              <Translate contentKey="reportserviceApp.reportserviceReport.authorId">Author Id</Translate>
-            </span>
-          </dt>
-          <dd>{reportEntity.authorId}</dd>
-          <dt>
             <span id="summary">
               <Translate contentKey="reportserviceApp.reportserviceReport.summary">Summary</Translate>
             </span>

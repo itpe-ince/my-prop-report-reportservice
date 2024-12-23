@@ -1,153 +1,145 @@
 package com.dnc.mprs.reportservice.domain;
 
 import com.dnc.mprs.reportservice.domain.enumeration.QualityStateType;
-import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
 import java.time.Instant;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 /**
  * A Report.
  */
-@Entity
-@Table(name = "report")
+@Table("report")
 @org.springframework.data.elasticsearch.annotations.Document(indexName = "report")
 @SuppressWarnings("common-java:DuplicatedBlocks")
 public class Report implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @NotNull
+    @NotNull(message = "must not be null")
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
+    @Column("id")
     private Long id;
 
-    @NotNull
+    @NotNull(message = "must not be null")
     @Size(max = 200)
-    @Column(name = "report_title", length = 200, nullable = false)
+    @Column("report_title")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String reportTitle;
 
-    @Column(name = "report_date")
+    @Column("report_date")
     private Instant reportDate;
 
-    @NotNull
-    @Column(name = "author_id", nullable = false)
-    private Long authorId;
-
-    @Column(name = "summary")
+    @Column("summary")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String summary;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "exterior_state", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("exterior_state")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType exteriorState;
 
-    @Column(name = "construction_year")
+    @Column("construction_year")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Integer)
     private Integer constructionYear;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "maintenance_state", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("maintenance_state")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType maintenanceState;
 
     @Size(max = 500)
-    @Column(name = "parking_facility", length = 500)
+    @Column("parking_facility")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String parkingFacility;
 
-    @Column(name = "parking_count")
+    @Column("parking_count")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Integer)
     private Integer parkingCount;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "elevator_state", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("elevator_state")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType elevatorState;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "noise_state", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("noise_state")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType noiseState;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "homepad_state", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("homepad_state")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType homepadState;
 
     @Size(min = 1, max = 1)
-    @Column(name = "cctv_yn", length = 1)
+    @Column("cctv_yn")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String cctvYn;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "fire_safety_state", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("fire_safety_state")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType fireSafetyState;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "door_security_state", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("door_security_state")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType doorSecurityState;
 
-    @Column(name = "maintenance_fee")
+    @Column("maintenance_fee")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Integer)
     private Integer maintenanceFee;
 
     @Size(min = 1, max = 1)
-    @Column(name = "redevelopment_yn", length = 1)
+    @Column("redevelopment_yn")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String redevelopmentYn;
 
     @Size(max = 200)
-    @Column(name = "rental_demand", length = 200)
+    @Column("rental_demand")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String rentalDemand;
 
     @Size(max = 2000)
-    @Column(name = "community_rules", length = 2000)
+    @Column("community_rules")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String communityRules;
 
-    @NotNull
-    @Column(name = "complex_id", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("complex_id")
     private Long complexId;
 
-    @NotNull
+    @NotNull(message = "must not be null")
     @Size(max = 255)
-    @Column(name = "complex_name", length = 255, nullable = false)
+    @Column("complex_name")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String complexName;
 
-    @NotNull
-    @Column(name = "property_id", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("property_id")
     private Long propertyId;
 
-    @NotNull
+    @NotNull(message = "must not be null")
     @Size(max = 255)
-    @Column(name = "property_name", length = 255, nullable = false)
+    @Column("property_name")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String propertyName;
 
-    @NotNull
-    @Column(name = "created_at", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("created_at")
     private Instant createdAt;
 
-    @Column(name = "updated_at")
+    @Column("updated_at")
     private Instant updatedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @org.springframework.data.annotation.Transient
     private Author author;
+
+    @Column("author_id")
+    private Long authorId;
 
     // jhipster-needle-entity-add-field - JHipster will add fields here
 
@@ -188,19 +180,6 @@ public class Report implements Serializable {
 
     public void setReportDate(Instant reportDate) {
         this.reportDate = reportDate;
-    }
-
-    public Long getAuthorId() {
-        return this.authorId;
-    }
-
-    public Report authorId(Long authorId) {
-        this.setAuthorId(authorId);
-        return this;
-    }
-
-    public void setAuthorId(Long authorId) {
-        this.authorId = authorId;
     }
 
     public String getSummary() {
@@ -495,11 +474,20 @@ public class Report implements Serializable {
 
     public void setAuthor(Author author) {
         this.author = author;
+        this.authorId = author != null ? author.getId() : null;
     }
 
     public Report author(Author author) {
         this.setAuthor(author);
         return this;
+    }
+
+    public Long getAuthorId() {
+        return this.authorId;
+    }
+
+    public void setAuthorId(Long author) {
+        this.authorId = author;
     }
 
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here
@@ -528,7 +516,6 @@ public class Report implements Serializable {
             "id=" + getId() +
             ", reportTitle='" + getReportTitle() + "'" +
             ", reportDate='" + getReportDate() + "'" +
-            ", authorId=" + getAuthorId() +
             ", summary='" + getSummary() + "'" +
             ", exteriorState='" + getExteriorState() + "'" +
             ", constructionYear=" + getConstructionYear() +

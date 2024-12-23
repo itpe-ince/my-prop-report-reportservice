@@ -2,74 +2,72 @@ package com.dnc.mprs.reportservice.domain;
 
 import com.dnc.mprs.reportservice.domain.enumeration.QualityStateType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 /**
  * A Bedroom.
  */
-@Entity
-@Table(name = "bedroom")
+@Table("bedroom")
 @org.springframework.data.elasticsearch.annotations.Document(indexName = "bedroom")
 @SuppressWarnings("common-java:DuplicatedBlocks")
 public class Bedroom implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @NotNull
+    @NotNull(message = "must not be null")
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
+    @Column("id")
     private Long id;
 
-    @NotNull
-    @Column(name = "report_id", nullable = false)
-    private Long reportId;
-
-    @NotNull
+    @NotNull(message = "must not be null")
     @Size(max = 100)
-    @Column(name = "bedroom_name", length = 100, nullable = false)
+    @Column("bedroom_name")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String bedroomName;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "condition_level", nullable = false)
+    @NotNull(message = "must not be null")
+    @Column("condition_level")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private QualityStateType conditionLevel;
 
-    @Column(name = "room_size", precision = 21, scale = 2)
+    @Column("room_size")
     private BigDecimal roomSize;
 
     @Size(min = 1, max = 1)
-    @Column(name = "closet_yn", length = 1)
+    @Column("closet_yn")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String closetYn;
 
     @Size(min = 1, max = 1)
-    @Column(name = "ac_yn", length = 1)
+    @Column("ac_yn")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String acYn;
 
     @Size(max = 100)
-    @Column(name = "window_location", length = 100)
+    @Column("window_location")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String windowLocation;
 
     @Size(max = 100)
-    @Column(name = "window_size", length = 100)
+    @Column("window_size")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String windowSize;
 
-    @Column(name = "remarks")
+    @Column("remarks")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String remarks;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @org.springframework.data.annotation.Transient
     @JsonIgnoreProperties(value = { "author" }, allowSetters = true)
     private Report report;
+
+    @Column("report_id")
+    private Long reportId;
 
     // jhipster-needle-entity-add-field - JHipster will add fields here
 
@@ -84,19 +82,6 @@ public class Bedroom implements Serializable {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Long getReportId() {
-        return this.reportId;
-    }
-
-    public Bedroom reportId(Long reportId) {
-        this.setReportId(reportId);
-        return this;
-    }
-
-    public void setReportId(Long reportId) {
-        this.reportId = reportId;
     }
 
     public String getBedroomName() {
@@ -135,7 +120,7 @@ public class Bedroom implements Serializable {
     }
 
     public void setRoomSize(BigDecimal roomSize) {
-        this.roomSize = roomSize;
+        this.roomSize = roomSize != null ? roomSize.stripTrailingZeros() : null;
     }
 
     public String getClosetYn() {
@@ -209,11 +194,20 @@ public class Bedroom implements Serializable {
 
     public void setReport(Report report) {
         this.report = report;
+        this.reportId = report != null ? report.getId() : null;
     }
 
     public Bedroom report(Report report) {
         this.setReport(report);
         return this;
+    }
+
+    public Long getReportId() {
+        return this.reportId;
+    }
+
+    public void setReportId(Long report) {
+        this.reportId = report;
     }
 
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here
@@ -240,7 +234,6 @@ public class Bedroom implements Serializable {
     public String toString() {
         return "Bedroom{" +
             "id=" + getId() +
-            ", reportId=" + getReportId() +
             ", bedroomName='" + getBedroomName() + "'" +
             ", conditionLevel='" + getConditionLevel() + "'" +
             ", roomSize=" + getRoomSize() +

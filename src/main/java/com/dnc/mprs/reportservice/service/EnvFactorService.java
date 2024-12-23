@@ -3,13 +3,13 @@ package com.dnc.mprs.reportservice.service;
 import com.dnc.mprs.reportservice.domain.EnvFactor;
 import com.dnc.mprs.reportservice.repository.EnvFactorRepository;
 import com.dnc.mprs.reportservice.repository.search.EnvFactorSearchRepository;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Service Implementation for managing {@link com.dnc.mprs.reportservice.domain.EnvFactor}.
@@ -35,11 +35,9 @@ public class EnvFactorService {
      * @param envFactor the entity to save.
      * @return the persisted entity.
      */
-    public EnvFactor save(EnvFactor envFactor) {
+    public Mono<EnvFactor> save(EnvFactor envFactor) {
         LOG.debug("Request to save EnvFactor : {}", envFactor);
-        envFactor = envFactorRepository.save(envFactor);
-        envFactorSearchRepository.index(envFactor);
-        return envFactor;
+        return envFactorRepository.save(envFactor).flatMap(envFactorSearchRepository::save);
     }
 
     /**
@@ -48,11 +46,9 @@ public class EnvFactorService {
      * @param envFactor the entity to save.
      * @return the persisted entity.
      */
-    public EnvFactor update(EnvFactor envFactor) {
+    public Mono<EnvFactor> update(EnvFactor envFactor) {
         LOG.debug("Request to update EnvFactor : {}", envFactor);
-        envFactor = envFactorRepository.save(envFactor);
-        envFactorSearchRepository.index(envFactor);
-        return envFactor;
+        return envFactorRepository.save(envFactor).flatMap(envFactorSearchRepository::save);
     }
 
     /**
@@ -61,15 +57,12 @@ public class EnvFactorService {
      * @param envFactor the entity to update partially.
      * @return the persisted entity.
      */
-    public Optional<EnvFactor> partialUpdate(EnvFactor envFactor) {
+    public Mono<EnvFactor> partialUpdate(EnvFactor envFactor) {
         LOG.debug("Request to partially update EnvFactor : {}", envFactor);
 
         return envFactorRepository
             .findById(envFactor.getId())
             .map(existingEnvFactor -> {
-                if (envFactor.getReportId() != null) {
-                    existingEnvFactor.setReportId(envFactor.getReportId());
-                }
                 if (envFactor.getEnvFactorName() != null) {
                     existingEnvFactor.setEnvFactorName(envFactor.getEnvFactorName());
                 }
@@ -82,10 +75,10 @@ public class EnvFactorService {
 
                 return existingEnvFactor;
             })
-            .map(envFactorRepository::save)
-            .map(savedEnvFactor -> {
-                envFactorSearchRepository.index(savedEnvFactor);
-                return savedEnvFactor;
+            .flatMap(envFactorRepository::save)
+            .flatMap(savedEnvFactor -> {
+                envFactorSearchRepository.save(savedEnvFactor);
+                return Mono.just(savedEnvFactor);
             });
     }
 
@@ -96,9 +89,26 @@ public class EnvFactorService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<EnvFactor> findAll(Pageable pageable) {
+    public Flux<EnvFactor> findAll(Pageable pageable) {
         LOG.debug("Request to get all EnvFactors");
-        return envFactorRepository.findAll(pageable);
+        return envFactorRepository.findAllBy(pageable);
+    }
+
+    /**
+     * Returns the number of envFactors available.
+     * @return the number of entities in the database.
+     *
+     */
+    public Mono<Long> countAll() {
+        return envFactorRepository.count();
+    }
+
+    /**
+     * Returns the number of envFactors available in search repository.
+     *
+     */
+    public Mono<Long> searchCount() {
+        return envFactorSearchRepository.count();
     }
 
     /**
@@ -108,7 +118,7 @@ public class EnvFactorService {
      * @return the entity.
      */
     @Transactional(readOnly = true)
-    public Optional<EnvFactor> findOne(Long id) {
+    public Mono<EnvFactor> findOne(Long id) {
         LOG.debug("Request to get EnvFactor : {}", id);
         return envFactorRepository.findById(id);
     }
@@ -117,11 +127,11 @@ public class EnvFactorService {
      * Delete the envFactor by id.
      *
      * @param id the id of the entity.
+     * @return a Mono to signal the deletion
      */
-    public void delete(Long id) {
+    public Mono<Void> delete(Long id) {
         LOG.debug("Request to delete EnvFactor : {}", id);
-        envFactorRepository.deleteById(id);
-        envFactorSearchRepository.deleteFromIndexById(id);
+        return envFactorRepository.deleteById(id).then(envFactorSearchRepository.deleteById(id));
     }
 
     /**
@@ -132,7 +142,7 @@ public class EnvFactorService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<EnvFactor> search(String query, Pageable pageable) {
+    public Flux<EnvFactor> search(String query, Pageable pageable) {
         LOG.debug("Request to search for a page of EnvFactors for query {}", query);
         return envFactorSearchRepository.search(query, pageable);
     }

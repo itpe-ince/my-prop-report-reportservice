@@ -3,13 +3,13 @@ package com.dnc.mprs.reportservice.service;
 import com.dnc.mprs.reportservice.domain.Entrance;
 import com.dnc.mprs.reportservice.repository.EntranceRepository;
 import com.dnc.mprs.reportservice.repository.search.EntranceSearchRepository;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Service Implementation for managing {@link com.dnc.mprs.reportservice.domain.Entrance}.
@@ -35,11 +35,9 @@ public class EntranceService {
      * @param entrance the entity to save.
      * @return the persisted entity.
      */
-    public Entrance save(Entrance entrance) {
+    public Mono<Entrance> save(Entrance entrance) {
         LOG.debug("Request to save Entrance : {}", entrance);
-        entrance = entranceRepository.save(entrance);
-        entranceSearchRepository.index(entrance);
-        return entrance;
+        return entranceRepository.save(entrance).flatMap(entranceSearchRepository::save);
     }
 
     /**
@@ -48,11 +46,9 @@ public class EntranceService {
      * @param entrance the entity to save.
      * @return the persisted entity.
      */
-    public Entrance update(Entrance entrance) {
+    public Mono<Entrance> update(Entrance entrance) {
         LOG.debug("Request to update Entrance : {}", entrance);
-        entrance = entranceRepository.save(entrance);
-        entranceSearchRepository.index(entrance);
-        return entrance;
+        return entranceRepository.save(entrance).flatMap(entranceSearchRepository::save);
     }
 
     /**
@@ -61,15 +57,12 @@ public class EntranceService {
      * @param entrance the entity to update partially.
      * @return the persisted entity.
      */
-    public Optional<Entrance> partialUpdate(Entrance entrance) {
+    public Mono<Entrance> partialUpdate(Entrance entrance) {
         LOG.debug("Request to partially update Entrance : {}", entrance);
 
         return entranceRepository
             .findById(entrance.getId())
             .map(existingEntrance -> {
-                if (entrance.getReportId() != null) {
-                    existingEntrance.setReportId(entrance.getReportId());
-                }
                 if (entrance.getEntranceName() != null) {
                     existingEntrance.setEntranceName(entrance.getEntranceName());
                 }
@@ -91,10 +84,10 @@ public class EntranceService {
 
                 return existingEntrance;
             })
-            .map(entranceRepository::save)
-            .map(savedEntrance -> {
-                entranceSearchRepository.index(savedEntrance);
-                return savedEntrance;
+            .flatMap(entranceRepository::save)
+            .flatMap(savedEntrance -> {
+                entranceSearchRepository.save(savedEntrance);
+                return Mono.just(savedEntrance);
             });
     }
 
@@ -105,9 +98,26 @@ public class EntranceService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Entrance> findAll(Pageable pageable) {
+    public Flux<Entrance> findAll(Pageable pageable) {
         LOG.debug("Request to get all Entrances");
-        return entranceRepository.findAll(pageable);
+        return entranceRepository.findAllBy(pageable);
+    }
+
+    /**
+     * Returns the number of entrances available.
+     * @return the number of entities in the database.
+     *
+     */
+    public Mono<Long> countAll() {
+        return entranceRepository.count();
+    }
+
+    /**
+     * Returns the number of entrances available in search repository.
+     *
+     */
+    public Mono<Long> searchCount() {
+        return entranceSearchRepository.count();
     }
 
     /**
@@ -117,7 +127,7 @@ public class EntranceService {
      * @return the entity.
      */
     @Transactional(readOnly = true)
-    public Optional<Entrance> findOne(Long id) {
+    public Mono<Entrance> findOne(Long id) {
         LOG.debug("Request to get Entrance : {}", id);
         return entranceRepository.findById(id);
     }
@@ -126,11 +136,11 @@ public class EntranceService {
      * Delete the entrance by id.
      *
      * @param id the id of the entity.
+     * @return a Mono to signal the deletion
      */
-    public void delete(Long id) {
+    public Mono<Void> delete(Long id) {
         LOG.debug("Request to delete Entrance : {}", id);
-        entranceRepository.deleteById(id);
-        entranceSearchRepository.deleteFromIndexById(id);
+        return entranceRepository.deleteById(id).then(entranceSearchRepository.deleteById(id));
     }
 
     /**
@@ -141,7 +151,7 @@ public class EntranceService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Entrance> search(String query, Pageable pageable) {
+    public Flux<Entrance> search(String query, Pageable pageable) {
         LOG.debug("Request to search for a page of Entrances for query {}", query);
         return entranceSearchRepository.search(query, pageable);
     }

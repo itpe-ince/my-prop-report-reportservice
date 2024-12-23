@@ -2,5 +2,4 @@ org.springframework.test.context.ContextCustomizerFactory = com.dnc.mprs.\
     reportservice.config.SqlTestContainersSpringContextCustomizerFactory,com.\
     dnc.mprs.reportservice.config.\
     TestContainersSpringContextCustomizerFactory,com.dnc.mprs.reportservice.\
-    config.RedisTestContainersSpringContextCustomizerFactory,com.dnc.mprs.\
-    reportservice.config.KafkaTestContainersSpringContextCustomizerFactory
+    config.KafkaTestContainersSpringContextCustomizerFactory

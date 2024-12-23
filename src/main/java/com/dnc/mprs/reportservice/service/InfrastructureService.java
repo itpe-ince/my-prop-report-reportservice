@@ -3,13 +3,13 @@ package com.dnc.mprs.reportservice.service;
 import com.dnc.mprs.reportservice.domain.Infrastructure;
 import com.dnc.mprs.reportservice.repository.InfrastructureRepository;
 import com.dnc.mprs.reportservice.repository.search.InfrastructureSearchRepository;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Service Implementation for managing {@link com.dnc.mprs.reportservice.domain.Infrastructure}.
@@ -38,11 +38,9 @@ public class InfrastructureService {
      * @param infrastructure the entity to save.
      * @return the persisted entity.
      */
-    public Infrastructure save(Infrastructure infrastructure) {
+    public Mono<Infrastructure> save(Infrastructure infrastructure) {
         LOG.debug("Request to save Infrastructure : {}", infrastructure);
-        infrastructure = infrastructureRepository.save(infrastructure);
-        infrastructureSearchRepository.index(infrastructure);
-        return infrastructure;
+        return infrastructureRepository.save(infrastructure).flatMap(infrastructureSearchRepository::save);
     }
 
     /**
@@ -51,11 +49,9 @@ public class InfrastructureService {
      * @param infrastructure the entity to save.
      * @return the persisted entity.
      */
-    public Infrastructure update(Infrastructure infrastructure) {
+    public Mono<Infrastructure> update(Infrastructure infrastructure) {
         LOG.debug("Request to update Infrastructure : {}", infrastructure);
-        infrastructure = infrastructureRepository.save(infrastructure);
-        infrastructureSearchRepository.index(infrastructure);
-        return infrastructure;
+        return infrastructureRepository.save(infrastructure).flatMap(infrastructureSearchRepository::save);
     }
 
     /**
@@ -64,15 +60,12 @@ public class InfrastructureService {
      * @param infrastructure the entity to update partially.
      * @return the persisted entity.
      */
-    public Optional<Infrastructure> partialUpdate(Infrastructure infrastructure) {
+    public Mono<Infrastructure> partialUpdate(Infrastructure infrastructure) {
         LOG.debug("Request to partially update Infrastructure : {}", infrastructure);
 
         return infrastructureRepository
             .findById(infrastructure.getId())
             .map(existingInfrastructure -> {
-                if (infrastructure.getReportId() != null) {
-                    existingInfrastructure.setReportId(infrastructure.getReportId());
-                }
                 if (infrastructure.getInfraType() != null) {
                     existingInfrastructure.setInfraType(infrastructure.getInfraType());
                 }
@@ -94,10 +87,10 @@ public class InfrastructureService {
 
                 return existingInfrastructure;
             })
-            .map(infrastructureRepository::save)
-            .map(savedInfrastructure -> {
-                infrastructureSearchRepository.index(savedInfrastructure);
-                return savedInfrastructure;
+            .flatMap(infrastructureRepository::save)
+            .flatMap(savedInfrastructure -> {
+                infrastructureSearchRepository.save(savedInfrastructure);
+                return Mono.just(savedInfrastructure);
             });
     }
 
@@ -108,9 +101,26 @@ public class InfrastructureService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Infrastructure> findAll(Pageable pageable) {
+    public Flux<Infrastructure> findAll(Pageable pageable) {
         LOG.debug("Request to get all Infrastructures");
-        return infrastructureRepository.findAll(pageable);
+        return infrastructureRepository.findAllBy(pageable);
+    }
+
+    /**
+     * Returns the number of infrastructures available.
+     * @return the number of entities in the database.
+     *
+     */
+    public Mono<Long> countAll() {
+        return infrastructureRepository.count();
+    }
+
+    /**
+     * Returns the number of infrastructures available in search repository.
+     *
+     */
+    public Mono<Long> searchCount() {
+        return infrastructureSearchRepository.count();
     }
 
     /**
@@ -120,7 +130,7 @@ public class InfrastructureService {
      * @return the entity.
      */
     @Transactional(readOnly = true)
-    public Optional<Infrastructure> findOne(Long id) {
+    public Mono<Infrastructure> findOne(Long id) {
         LOG.debug("Request to get Infrastructure : {}", id);
         return infrastructureRepository.findById(id);
     }
@@ -129,11 +139,11 @@ public class InfrastructureService {
      * Delete the infrastructure by id.
      *
      * @param id the id of the entity.
+     * @return a Mono to signal the deletion
      */
-    public void delete(Long id) {
+    public Mono<Void> delete(Long id) {
         LOG.debug("Request to delete Infrastructure : {}", id);
-        infrastructureRepository.deleteById(id);
-        infrastructureSearchRepository.deleteFromIndexById(id);
+        return infrastructureRepository.deleteById(id).then(infrastructureSearchRepository.deleteById(id));
     }
 
     /**
@@ -144,7 +154,7 @@ public class InfrastructureService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<Infrastructure> search(String query, Pageable pageable) {
+    public Flux<Infrastructure> search(String query, Pageable pageable) {
         LOG.debug("Request to search for a page of Infrastructures for query {}", query);
         return infrastructureSearchRepository.search(query, pageable);
     }

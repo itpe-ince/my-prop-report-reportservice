@@ -4,26 +4,30 @@ import com.dnc.mprs.reportservice.domain.Entrance;
 import com.dnc.mprs.reportservice.repository.EntranceRepository;
 import com.dnc.mprs.reportservice.service.EntranceService;
 import com.dnc.mprs.reportservice.web.rest.errors.BadRequestAlertException;
-import com.dnc.mprs.reportservice.web.rest.errors.ElasticsearchExceptionMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.ForwardedHeaderUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.PaginationUtil;
-import tech.jhipster.web.util.ResponseUtil;
+import tech.jhipster.web.util.reactive.ResponseUtil;
 
 /**
  * REST controller for managing {@link com.dnc.mprs.reportservice.domain.Entrance}.
@@ -56,15 +60,22 @@ public class EntranceResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PostMapping("")
-    public ResponseEntity<Entrance> createEntrance(@Valid @RequestBody Entrance entrance) throws URISyntaxException {
+    public Mono<ResponseEntity<Entrance>> createEntrance(@Valid @RequestBody Entrance entrance) throws URISyntaxException {
         LOG.debug("REST request to save Entrance : {}", entrance);
         if (entrance.getId() != null) {
             throw new BadRequestAlertException("A new entrance cannot already have an ID", ENTITY_NAME, "idexists");
         }
-        entrance = entranceService.save(entrance);
-        return ResponseEntity.created(new URI("/api/entrances/" + entrance.getId()))
-            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, entrance.getId().toString()))
-            .body(entrance);
+        return entranceService
+            .save(entrance)
+            .map(result -> {
+                try {
+                    return ResponseEntity.created(new URI("/api/entrances/" + result.getId()))
+                        .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
+                        .body(result);
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException(e);
+                }
+            });
     }
 
     /**
@@ -78,7 +89,7 @@ public class EntranceResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Entrance> updateEntrance(
+    public Mono<ResponseEntity<Entrance>> updateEntrance(
         @PathVariable(value = "id", required = false) final Long id,
         @Valid @RequestBody Entrance entrance
     ) throws URISyntaxException {
@@ -90,14 +101,22 @@ public class EntranceResource {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
-        if (!entranceRepository.existsById(id)) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
-        }
+        return entranceRepository
+            .existsById(id)
+            .flatMap(exists -> {
+                if (!exists) {
+                    return Mono.error(new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound"));
+                }
 
-        entrance = entranceService.update(entrance);
-        return ResponseEntity.ok()
-            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, entrance.getId().toString()))
-            .body(entrance);
+                return entranceService
+                    .update(entrance)
+                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
+                    .map(result ->
+                        ResponseEntity.ok()
+                            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
+                            .body(result)
+                    );
+            });
     }
 
     /**
@@ -112,7 +131,7 @@ public class EntranceResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
-    public ResponseEntity<Entrance> partialUpdateEntrance(
+    public Mono<ResponseEntity<Entrance>> partialUpdateEntrance(
         @PathVariable(value = "id", required = false) final Long id,
         @NotNull @RequestBody Entrance entrance
     ) throws URISyntaxException {
@@ -124,30 +143,51 @@ public class EntranceResource {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
-        if (!entranceRepository.existsById(id)) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
-        }
+        return entranceRepository
+            .existsById(id)
+            .flatMap(exists -> {
+                if (!exists) {
+                    return Mono.error(new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound"));
+                }
 
-        Optional<Entrance> result = entranceService.partialUpdate(entrance);
+                Mono<Entrance> result = entranceService.partialUpdate(entrance);
 
-        return ResponseUtil.wrapOrNotFound(
-            result,
-            HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, entrance.getId().toString())
-        );
+                return result
+                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
+                    .map(res ->
+                        ResponseEntity.ok()
+                            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, res.getId().toString()))
+                            .body(res)
+                    );
+            });
     }
 
     /**
      * {@code GET  /entrances} : get all the entrances.
      *
      * @param pageable the pagination information.
+     * @param request a {@link ServerHttpRequest} request.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of entrances in body.
      */
-    @GetMapping("")
-    public ResponseEntity<List<Entrance>> getAllEntrances(@org.springdoc.core.annotations.ParameterObject Pageable pageable) {
+    @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<List<Entrance>>> getAllEntrances(
+        @org.springdoc.core.annotations.ParameterObject Pageable pageable,
+        ServerHttpRequest request
+    ) {
         LOG.debug("REST request to get a page of Entrances");
-        Page<Entrance> page = entranceService.findAll(pageable);
-        HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
-        return ResponseEntity.ok().headers(headers).body(page.getContent());
+        return entranceService
+            .countAll()
+            .zipWith(entranceService.findAll(pageable).collectList())
+            .map(countWithEntities ->
+                ResponseEntity.ok()
+                    .headers(
+                        PaginationUtil.generatePaginationHttpHeaders(
+                            ForwardedHeaderUtils.adaptFromForwardedHeaders(request.getURI(), request.getHeaders()),
+                            new PageImpl<>(countWithEntities.getT2(), pageable, countWithEntities.getT1())
+                        )
+                    )
+                    .body(countWithEntities.getT2())
+            );
     }
 
     /**
@@ -157,9 +197,9 @@ public class EntranceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the entrance, or with status {@code 404 (Not Found)}.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Entrance> getEntrance(@PathVariable("id") Long id) {
+    public Mono<ResponseEntity<Entrance>> getEntrance(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Entrance : {}", id);
-        Optional<Entrance> entrance = entranceService.findOne(id);
+        Mono<Entrance> entrance = entranceService.findOne(id);
         return ResponseUtil.wrapOrNotFound(entrance);
     }
 
@@ -170,12 +210,17 @@ public class EntranceResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEntrance(@PathVariable("id") Long id) {
+    public Mono<ResponseEntity<Void>> deleteEntrance(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Entrance : {}", id);
-        entranceService.delete(id);
-        return ResponseEntity.noContent()
-            .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
-            .build();
+        return entranceService
+            .delete(id)
+            .then(
+                Mono.just(
+                    ResponseEntity.noContent()
+                        .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
+                        .build()
+                )
+            );
     }
 
     /**
@@ -184,20 +229,25 @@ public class EntranceResource {
      *
      * @param query the query of the entrance search.
      * @param pageable the pagination information.
+     * @param request a {@link ServerHttpRequest} request.
      * @return the result of the search.
      */
     @GetMapping("/_search")
-    public ResponseEntity<List<Entrance>> searchEntrances(
+    public Mono<ResponseEntity<Flux<Entrance>>> searchEntrances(
         @RequestParam("query") String query,
-        @org.springdoc.core.annotations.ParameterObject Pageable pageable
+        @org.springdoc.core.annotations.ParameterObject Pageable pageable,
+        ServerHttpRequest request
     ) {
         LOG.debug("REST request to search for a page of Entrances for query {}", query);
-        try {
-            Page<Entrance> page = entranceService.search(query, pageable);
-            HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
-            return ResponseEntity.ok().headers(headers).body(page.getContent());
-        } catch (RuntimeException e) {
-            throw ElasticsearchExceptionMapper.mapException(e);
-        }
+        return entranceService
+            .searchCount()
+            .map(total -> new PageImpl<>(new ArrayList<>(), pageable, total))
+            .map(page ->
+                PaginationUtil.generatePaginationHttpHeaders(
+                    ForwardedHeaderUtils.adaptFromForwardedHeaders(request.getURI(), request.getHeaders()),
+                    page
+                )
+            )
+            .map(headers -> ResponseEntity.ok().headers(headers).body(entranceService.search(query, pageable)));
     }
 }
